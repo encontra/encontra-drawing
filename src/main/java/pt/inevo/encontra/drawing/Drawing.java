@@ -283,7 +283,7 @@ public class Drawing {
 
         _log.info("Initializing Drawing...");
 
-        // “boot the CSS engine” to get Batik to compute the CSS
+        // boot the CSS engine to get Batik to compute the CSS
         UserAgentAdapter userAgent = new UserAgentAdapter();
         DocumentLoader loader    = new DocumentLoader(userAgent);
         BridgeContext ctx       = new BridgeContext(userAgent, loader);
