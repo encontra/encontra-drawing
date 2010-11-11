@@ -33,7 +33,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
-public class Drawing {
+public class    Drawing {
 
     private static Logger _log=Logger.getLogger(Drawing.class.getName());
     private static int THUMB_WIDTH = 128;
