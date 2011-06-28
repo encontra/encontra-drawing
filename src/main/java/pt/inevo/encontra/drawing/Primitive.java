@@ -49,6 +49,7 @@ import org.w3c.dom.svg.SVGPathSegMovetoRel;
 import org.w3c.dom.svg.SVGPoint;
 import org.w3c.dom.svg.SVGStylable;
 
+import pt.inevo.encontra.common.distance.HasDistance;
 import pt.inevo.encontra.drawing.util.Color;
 import pt.inevo.encontra.drawing.util.Functions;
 import pt.inevo.encontra.geometry.Point;
@@ -59,7 +60,7 @@ import java.util.ArrayList;
 
 //import pt.inevo.swig.nbtree.SWIGTYPE_p_Primitive;
 
-public class Primitive  {
+public class Primitive implements HasDistance<Primitive> {
 
 
 	// Constants uses in the detection of intersections
@@ -988,4 +989,9 @@ public class Primitive  {
 
 		return points;
 	}*/
+
+    @Override
+    public double getDistance(Primitive other) {
+        return this.getShortestDistance(other);
+    }
 }

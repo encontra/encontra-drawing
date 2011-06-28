@@ -24,6 +24,8 @@ import org.w3c.dom.svg.SVGDocument;
 import pt.inevo.encontra.drawing.util.Color;
 import pt.inevo.encontra.drawing.util.Functions;
 import pt.inevo.encontra.geometry.Point;
+import pt.inevo.encontra.index.IndexedObject;
+import pt.inevo.encontra.storage.IEntity;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -33,7 +35,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
-public class    Drawing {
+public class Drawing implements IEntity<Long>{
 
     private static Logger _log=Logger.getLogger(Drawing.class.getName());
     private static int THUMB_WIDTH = 128;
@@ -74,15 +76,15 @@ public class    Drawing {
     private List <Primitive> _list_primitives;	//!< List of all the Primitives
     private List <Primitive> _list_primitives_area; //!< List of all Primitivies ordered by area
 
-    private int	_id;
+    private long _id;
 
     private  double	_height,_width; 			//!< height,width of the Drawing
 
     private String _svgNS; // SVG Namespace URI
     protected SVGDocument _document; // SVGDocument
 
-    public void setId(int id) { _id = id; } //!< Sets this Drawing's id.
-    public int	getId() { return _id; }; //!< Returns this Drawing's id.
+    public void setId(Long id) { _id = id; } //!< Sets this Drawing's id.
+    public Long getId() { return _id; }; //!< Returns this Drawing's id.
 
     /** Default constructor.
      */
