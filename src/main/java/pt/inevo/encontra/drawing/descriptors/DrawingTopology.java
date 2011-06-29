@@ -1,17 +1,15 @@
 package pt.inevo.encontra.drawing.descriptors;
 
-
 import cern.colt.matrix.DoubleFactory1D;
 import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
 import pt.inevo.encontra.drawing.Drawing;
 import pt.inevo.encontra.drawing.Primitive;
 import pt.inevo.encontra.graph.Graph;
+import pt.inevo.encontra.graph.GraphEdge;
 import pt.inevo.encontra.graph.GraphNode;
 import pt.inevo.encontra.graph.swing.GraphViewer;
-import pt.inevo.encontra.index.IndexedObject;
 import pt.inevo.encontra.index.Vector;
-import pt.inevo.encontra.storage.IEntity;
 import pt.inevo.encontra.storage.IEntry;
 
 import java.util.ArrayList;
@@ -37,7 +35,7 @@ public class DrawingTopology implements IEntry<Long,List<Vector>> {
 
     public Graph buildTopologyGraph(Drawing drawing) {
         // Create the new Graph with the same id as the drawing
-        Graph graph = new Graph(drawing.getId());
+        Graph<GraphNode<Primitive>, GraphEdge> graph = new Graph(drawing.getId());
 
         /* Retrieve all primitives in an ordered list (the direction really doesn't
            * matter as long as it's ordered somehow.
@@ -61,7 +59,10 @@ public class DrawingTopology implements IEntry<Long,List<Vector>> {
         rootPrimitive.addPoint(0, drawing.getHeight());
         rootPrimitive.addPoint(0, 0);
 
-        graph.createNode(0, rootPrimitive); // Root node
+        GraphNode rootNode = new GraphNode();
+        rootNode.setData(rootPrimitive);
+
+        graph.createNode(0l, rootNode); // Root node
 
         // Add all Primitives in the list to the rootNode.
         for(i = 0; i < lst_primitives.size(); i++) {
@@ -69,8 +70,10 @@ public class DrawingTopology implements IEntry<Long,List<Vector>> {
 
             assert(tempPrimitive!=null);
 
-            graph.createNode(tempPrimitive.getId(), tempPrimitive);
-            graph.addChild(0, tempPrimitive.getId());
+            GraphNode tempNode = new GraphNode(new Long(tempPrimitive.getId()));
+            tempNode.setData(tempPrimitive);
+
+            graph.addChild(0l, new Long(tempPrimitive.getId()));
         }
 
         // Do the inclusion thing first (proximity depends on inclusion)
@@ -84,12 +87,12 @@ public class DrawingTopology implements IEntry<Long,List<Vector>> {
                 Primitive thatPrimitive = lst_primitives.get(j);
 
                 if (thisPrimitive.isInPrimitive(thatPrimitive)) {
-                    graph.setParent(thisPrimitive.getId(), thatPrimitive.getId());
+                    graph.setParent(new Long(thisPrimitive.getId()), new Long(thatPrimitive.getId()));
                 }
 
                 // Check if the primitive at j is in the primitive at i
                 if (thatPrimitive.isInPrimitive(thisPrimitive)) {
-                    graph.setParent(thatPrimitive.getId(), thisPrimitive.getId());
+                    graph.setParent(new Long(thatPrimitive.getId()), new Long(thisPrimitive.getId()));
                 }
             }
         }
@@ -98,7 +101,7 @@ public class DrawingTopology implements IEntry<Long,List<Vector>> {
            * the same parent node will be considered adjacent.
            */
 
-        List<GraphNode> nodeList = graph.getVerticesList();
+        List<GraphNode<Primitive>> nodeList = graph.getVerticesList();
 
         for(i = 0; i < nodeList.size(); i++) {
             for(j = i+1; j < nodeList.size(); j++) {

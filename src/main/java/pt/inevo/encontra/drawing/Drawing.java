@@ -18,13 +18,11 @@ import org.apache.batik.transcoder.wmf.tosvg.WMFTranscoder;
 import org.apache.batik.util.SVG12Constants;
 import org.apache.batik.util.XMLResourceDescriptor;
 import org.w3c.dom.DOMImplementation;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.svg.SVGDocument;
 import pt.inevo.encontra.drawing.util.Color;
 import pt.inevo.encontra.drawing.util.Functions;
 import pt.inevo.encontra.geometry.Point;
-import pt.inevo.encontra.index.IndexedObject;
 import pt.inevo.encontra.storage.IEntity;
 
 import java.awt.image.BufferedImage;
@@ -776,15 +774,15 @@ public class Drawing implements IEntity<Long>{
             Primitive p = lst_primitives_area.get(i);
             //assert(p);
 
-            if(p.getBorderColor().is_set() || p.getFillColor().is_set()){
+            if(p.getBorderColor().isSet() || p.getFillColor().isSet()){
 
                 xmin_i = p.getXmin();
                 xmax_i = p.getXmax();
                 ymin_i = p.getYmin();
                 ymax_i = p.getYmax();
-                color_h_i = p.getFillColor()._h;
-                color_s_i = p.getFillColor()._s;
-                color_v_i = p.getFillColor()._v;
+                color_h_i = p.getFillColor().hue;
+                color_s_i = p.getFillColor().saturation;
+                color_v_i = p.getFillColor().value;
 
                 int j = i+1;
 
@@ -797,15 +795,15 @@ public class Drawing implements IEntity<Long>{
                     if((p_j.getAreaSize() - p.getAreaSize()) >= area_max)
                         break;
 
-                    if(p_j.getBorderColor()._is_set || p_j.getFillColor()._is_set){
+                    if(p_j.getBorderColor().isSet || p_j.getFillColor().isSet){
                         dist_xmin = Math.abs(xmin_i - p_j.getXmin());
                         dist_xmax = Math.abs(p_j.getXmax() - xmax_i);
                         dist_ymin = Math.abs(ymin_i - p_j.getYmin());
                         dist_ymax = Math.abs(p_j.getYmax() - ymax_i);
 
-                        color_h_j = p_j.getFillColor()._h;
-                        color_s_j = p_j.getFillColor()._s;
-                        color_v_j = p_j.getFillColor()._v;
+                        color_h_j = p_j.getFillColor().hue;
+                        color_s_j = p_j.getFillColor().saturation;
+                        color_v_j = p_j.getFillColor().value;
 
 
                         dist_h = Math.abs(color_h_i - color_h_j);
@@ -821,8 +819,8 @@ public class Drawing implements IEntity<Long>{
                                 (dist_s >= 0) && (dist_s < SATURATION_DIF) &&
                                 (dist_v >= 0) && (dist_v < VALUE_DIF)){
 
-                            p.setBorderColor(new Color(0,0,0,false));
-                            p.setFillColor(new Color(0,0,0,false));
+                            p.setBorderColor(new Color(0,0,0,1,false));
+                            p.setFillColor(new Color(0,0,0,1,false));
                             break;
 
                         }
@@ -840,7 +838,7 @@ public class Drawing implements IEntity<Long>{
         for(ii=0; ii < size; ii++){
             Primitive p_i = this.getPrimitive(ii);
 
-            if(p_i.getFillColor().is_set() || p_i.getBorderColor().is_set()){
+            if(p_i.getFillColor().isSet() || p_i.getBorderColor().isSet()){
                 new_list_primitives.add(p_i);
             }
             else
@@ -890,15 +888,15 @@ public class Drawing implements IEntity<Long>{
                 p_i_points = p_i.getNumPoints();
 
                 if (p_i_points == 0) {
-                    p_i.setBorderColor(new Color(0,0,0,false));
-                    p_i.setFillColor(new Color(0,0,0,false));
+                    p_i.setBorderColor(new Color(0,0,0,1,false));
+                    p_i.setFillColor(new Color(0,0,0,1,false));
                 }
 
                 p_i_bcolor = p_i.getBorderColor();
                 p_i_fcolor = p_i.getFillColor();
 
                 //this is possible when there are objects inserted after an clipping operation
-                if (p_i_bcolor._is_set ||  p_i_fcolor._is_set) {
+                if (p_i_bcolor.isSet ||  p_i_fcolor.isSet) {
                     //get already drawn primitives (backwards)
                     for (j = i-1; j >=0 ; j--) {
 
@@ -906,16 +904,16 @@ public class Drawing implements IEntity<Long>{
                         p_j_points = p_j.getNumPoints();
 
                         if (p_j_points == 0) {
-                            p_j.setBorderColor(new Color(0,0,0,false));
-                            p_j.setFillColor(new Color(0,0,0,false));
+                            p_j.setBorderColor(new Color(0,0,0,1,false));
+                            p_j.setFillColor(new Color(0,0,0,1,false));
                         }
 
                         p_j_bcolor = p_j.getBorderColor();
                         p_j_fcolor = p_j.getFillColor();
 
                         //skip test with primitives, which are already excluded
-                        if ((p_i_bcolor._is_set ||  p_i_fcolor._is_set) &&
-                                (p_j_bcolor._is_set ||  p_j_fcolor._is_set)) {
+                        if ((p_i_bcolor.isSet ||  p_i_fcolor.isSet) &&
+                                (p_j_bcolor.isSet ||  p_j_fcolor.isSet)) {
 
                             //boundingbox test (if the boundin boxes don't collide, then we don't even have to look at the vertices)
 //	                        std::cout << "searching for colliding bounding boxes..." << std::endl;
@@ -927,7 +925,7 @@ public class Drawing implements IEntity<Long>{
                                 if ( (p_i.isClosed()) && (p_j.isClosed()) ) {
 
                                     //color tests to eventually combine and exclude j (inner primitive)
-                                    if ((p_i_fcolor._is_set) && (p_j_fcolor._is_set)) {
+                                    if ((p_i_fcolor.isSet) && (p_j_fcolor.isSet)) {
 
                                         //bordercolor test
                                         //combine methode
@@ -936,27 +934,27 @@ public class Drawing implements IEntity<Long>{
                                         Color cf = null;
                                         cb = p_i_bcolor;
                                         cf = p_i_fcolor;
-                                        if ( (cb._is_set) && (cf._is_set) && (cb._r==cf._r) && (cb._g==cf._g) && (cb._b==cf._b) ) cb._is_set = false;
+                                        if ( (cb.isSet) && (cf.isSet) && (cb.red ==cf.red) && (cb.green ==cf.green) && (cb.blue ==cf.blue) ) cb.isSet = false;
 
                                         cb = p_j_bcolor;
                                         cf = p_j_fcolor;
-                                        if ( (cb._is_set) && (cf._is_set) && (cb._r==cf._r) && (cb._g==cf._g) && (cb._b==cf._b) ) cb._is_set = false;
+                                        if ( (cb.isSet) && (cf.isSet) && (cb.red ==cf.red) && (cb.green ==cf.green) && (cb.blue ==cf.blue) ) cb.isSet = false;
 
 
                                         //SPEED Pre-optimalisation
                                         if ( countOptimize > MAX_COUNT_OPTIMIZE ) {
                                             if (p_i_points > MAX_VERTICES) {
-                                                p_i.poly_simplify(pre_tol);
+                                                p_i.polySimplify(pre_tol);
                                                 if ((p_i_points > MAX_VERTICES) && (OVER_TOL > 1)) {
-                                                    p_i.poly_simplify(pre_tol*OVER_TOL);
+                                                    p_i.polySimplify(pre_tol * OVER_TOL);
                                                 }
                                                 countOptimize=0;
                                             }
 
                                             if (p_j_points > MAX_VERTICES) {
-                                                p_j.poly_simplify(pre_tol);
+                                                p_j.polySimplify(pre_tol);
                                                 if ((p_j_points > MAX_VERTICES) && (OVER_TOL > 1)) {
-                                                    p_j.poly_simplify(pre_tol*OVER_TOL);
+                                                    p_j.polySimplify(pre_tol * OVER_TOL);
                                                 }
                                                 countOptimize=0;
                                             }
@@ -969,11 +967,11 @@ public class Drawing implements IEntity<Long>{
                                         //test if color is within range AND there is no border
                                         if (
                                                 (
-                                                        ((Math.abs(p_i_fcolor._h - p_j_fcolor._h) < HUE_TOL)  || (2*Math.PI - Math.abs(p_i_fcolor._h - p_j_fcolor._h) < HUE_TOL))&&
-                                                                (Math.abs(p_i_fcolor._s - p_j_fcolor._s) < SATURATION_TOL) &&
-                                                                (Math.abs(p_i_fcolor._v - p_j_fcolor._v) < INTENSITY_TOL)
+                                                        ((Math.abs(p_i_fcolor.hue - p_j_fcolor.hue) < HUE_TOL)  || (2*Math.PI - Math.abs(p_i_fcolor.hue - p_j_fcolor.hue) < HUE_TOL))&&
+                                                                (Math.abs(p_i_fcolor.saturation - p_j_fcolor.saturation) < SATURATION_TOL) &&
+                                                                (Math.abs(p_i_fcolor.value - p_j_fcolor.value) < INTENSITY_TOL)
                                                 ) && (
-                                                        (!p_i_bcolor._is_set) && (!p_j_bcolor._is_set)
+                                                        (!p_i_bcolor.isSet) && (!p_j_bcolor.isSet)
                                                 )
 
                                                 ) {
@@ -989,10 +987,10 @@ public class Drawing implements IEntity<Long>{
 
 //	                                            std::cout << "ik heb ge-unioned; " << insertedPrimitives << " polygonen toegevoegd, new_count:" << (this.primitivesCount() - nrToBeRemoved) << std::endl;
                                                 //set original i and j transparent, so it gets excluded
-                                                p_i.setBorderColor(new Color(255,255,255,false));
-                                                p_i.setFillColor(new Color(255,255,255,false));
-                                                p_j.setBorderColor(new Color(255,255,255,false));
-                                                p_j.setFillColor(new Color(255,255,255,false));
+                                                p_i.setBorderColor(new Color(255,255,255,255,false));
+                                                p_i.setFillColor(new Color(255,255,255,255,false));
+                                                p_j.setBorderColor(new Color(255,255,255,255,false));
+                                                p_j.setFillColor(new Color(255,255,255,255,false));
 
                                                 //update p_i to union of i and j
                                                 p_i = this.getPrimitive(i);
@@ -1008,8 +1006,8 @@ public class Drawing implements IEntity<Long>{
 
 //	                                      std::cout << "ik heb geclipped; " << insertedPrimitives << " polygonen toegevoegd, new_count:" << (this.primitivesCount() - nrToBeRemoved) << std::endl;
                                             //set original j transparent, so it gets excluded
-                                            p_j.setBorderColor(new Color(255,255,255,false));
-                                            p_j.setFillColor(new Color(255,255,255,false));
+                                            p_j.setBorderColor(new Color(255,255,255,255,false));
+                                            p_j.setFillColor(new Color(255,255,255,255,false));
 
 
                                             //the upper primitive has moved to i + insertedPrimitives
@@ -1037,7 +1035,7 @@ public class Drawing implements IEntity<Long>{
             for(ii=0;ii<this.primitivesCount();ii++) {
                 Primitive p = this.getPrimitive(ii);
 
-                if (p.getBorderColor()._is_set || p.getFillColor()._is_set) {
+                if (p.getBorderColor().isSet || p.getFillColor().isSet) {
                     new_list_primitives.add(p);//push_back(p);
                 } else {
                     //delete p;
@@ -1074,7 +1072,7 @@ public class Drawing implements IEntity<Long>{
 //	            std::cout << "simpl" << p.getId << "/" << size << std::endl;
 
                 // check if the primitive isn't invisible
-                if ((p.getFillColor()._is_set) || (p.getBorderColor()._is_set)) {
+                if ((p.getFillColor().isSet) || (p.getBorderColor().isSet)) {
                     //add to new list, when there isn't an areaSize or when the areaSize is above the threshold
                     Double area=p.getAreaSize();
                     if ((area==-1) || (area > threshold_size)) {
@@ -1118,7 +1116,7 @@ public class Drawing implements IEntity<Long>{
 
 //	            std::cout << "simpl" << p.getId << "/" << size << std::endl;
 
-                p.poly_simplify(rel_tol);
+                p.polySimplify(rel_tol);
 
                 //add to new list, when there are still points left and in case of lines, the total length of a line still is bigger then the threshold
                 if ( p.getNumPoints() > 0 ) {
@@ -1167,7 +1165,7 @@ public class Drawing implements IEntity<Long>{
             for(int i=0;i<primitive_count;i++) {
 //	            std::cout << " i=" << i << std::endl;
                 p_i=this.getPrimitive(i);
-//	            p_i.poly_simplify(pre_tol);
+//	            p_i.polySimplify(pre_tol);
 
                 p_i_points=p_i.getNumPoints();
                 double points_needed = SURROUND_TOL_POINTS * p_i_points;
@@ -1179,7 +1177,7 @@ public class Drawing implements IEntity<Long>{
 //	                    std::cout << "  j=" << j << std::endl;
 
                         p_j=this.getPrimitive(j);
-//	                    p_j.poly_simplify(pre_tol);
+//	                    p_j.polySimplify(pre_tol);
                         p_j_points=p_j.getNumPoints();
 
                         double points_needed_j = SURROUND_TOL_POINTS*p_j_points;
@@ -1195,7 +1193,7 @@ public class Drawing implements IEntity<Long>{
                             for(int l=0; l<p_j_points; l++) {
                                 //                        std::cout << "    l=" << l << std::endl;
                                 point_j = p_j.getPoint(l);
-                                double cur_dist2 = point_i.DistanceTo(point_j);
+                                double cur_dist2 = point_i.distanceTo(point_j);
 
                                 //                        std::cout << "     testing..." << std::endl;
                                 if (cur_dist2 <= max_dist2_allowed) {
@@ -1218,9 +1216,9 @@ public class Drawing implements IEntity<Long>{
                                 // only possible for lines, because we want the upper polygon, not the outer, because that is probably shadow  (after gradient color polygon combining)
                                 if (!(p_j.isClosed())) {
                                     //combine bordercolors if needed
-                                    if (!(p_i.getBorderColor()._is_set)) {
+                                    if (!(p_i.getBorderColor().isSet)) {
                                         Color bc = p_j.getBorderColor();
-                                        p_i.setBorderColor(new Color(bc._r,bc._g,bc._b,bc._is_set));
+                                        p_i.setBorderColor(new Color(bc.red,bc.green,bc.blue,bc.getAlpha(),bc.isSet));
 
                                     }
 
@@ -1237,26 +1235,26 @@ public class Drawing implements IEntity<Long>{
                         if (points_in_range >= points_needed) {
                             /*
                                    std::cout << "excluding: " << points_in_range << "/" << points_needed << std::endl;
-                                   std::cout << " bordercolor: " << (p_j.getBorderColor()._is_set) << std::endl;
+                                   std::cout << " bordercolor: " << (p_j.getBorderColor().isSet) << std::endl;
                                    std::cout << " isClosed: " << (p_j.isClosed()) << std::endl;
-                                   std::cout << " fillcolor: " << (p_j.getFillColor()._is_set) << std::endl;
+                                   std::cout << " fillcolor: " << (p_j.getFillColor().isSet) << std::endl;
 
            */
                             //combine colors if needed
-                            if (!(p_j.getBorderColor()._is_set)) {
+                            if (!(p_j.getBorderColor().isSet)) {
                                 Color bc = p_i.getBorderColor();
-                                p_j.setBorderColor(new Color(bc._r,bc._g,bc._b,bc._is_set));
+                                p_j.setBorderColor(new Color(bc.red,bc.green,bc.blue,bc.getAlpha(),bc.isSet));
                             }
 
-                            if ((p_j.isClosed()) && (!(p_j.getFillColor()._is_set))) {
+                            if ((p_j.isClosed()) && (!(p_j.getFillColor().isSet))) {
                                 Color fc = p_i.getFillColor();
-                                p_j.setFillColor(new Color(fc._r,fc._g,fc._b,fc._is_set));
+                                p_j.setFillColor(new Color(fc.red,fc.green,fc.blue,fc.getAlpha(),fc.isSet));
                                 //if the one you keep isn't a polygon(but a polyline), BUT the one you exclude is
-                            } else if ((p_i.isClosed()) && (!(p_i.getFillColor()._is_set))) {
+                            } else if ((p_i.isClosed()) && (!(p_i.getFillColor().isSet))) {
                                 //then exclude the outer polyline, and keep the inner polygon
-                                if (!(p_i.getBorderColor()._is_set)) {
+                                if (!(p_i.getBorderColor().isSet)) {
                                     Color bc = p_j.getBorderColor();
-                                    p_i.setBorderColor(new Color(bc._r,bc._g,bc._b,bc._is_set));
+                                    p_i.setBorderColor(new Color(bc.red,bc.green,bc.blue,bc.getAlpha(),bc.isSet));
                                 }
 
                                 exclude_list_primitives.add(j);//push_back(j);
@@ -1438,12 +1436,12 @@ public class Drawing implements IEntity<Long>{
 
 
                 //give it the avarage fill color of the original
-                if (t2f._is_set) {
-                    p_new.setBorderColor(new Color((tb._r + t2b._r) / 2,(tb._g + t2b._g) / 2,(tb._b + tb._b) /2,tb._is_set));
-                    p_new.setFillColor(new Color((tf._r + t2f._r) / 2,(tf._g + t2f._g) / 2,(tf._b + tf._b) /2,tf._is_set));
+                if (t2f.isSet) {
+                    p_new.setBorderColor(new Color((tb.red + t2b.red) / 2,(tb.green + t2b.green) / 2,(tb.blue + tb.blue) /2,255,tb.isSet));
+                    p_new.setFillColor(new Color((tf.red + t2f.red) / 2,(tf.green + t2f.green) / 2,(tf.blue + tf.blue) /2,255,tf.isSet));
                 } else {
-                    p_new.setBorderColor(new Color(tb._r,tb._g,tb._b,tb._is_set));
-                    p_new.setFillColor(new Color(tf._r,tf._g,tf._b,tf._is_set));
+                    p_new.setBorderColor(new Color(tb.red,tb.green,tb.blue,tb.getAlpha(),tb.isSet));
+                    p_new.setFillColor(new Color(tf.red,tf.green,tf.blue,tf.getAlpha(),tf.isSet));
                 }
 
             } else {
@@ -1451,8 +1449,8 @@ public class Drawing implements IEntity<Long>{
                 p_new = this.insertNewPrimitive(pr_i + insertedNewPrimitives);
                 assert(p_new!=null);
 
-                p_new.setBorderColor(new Color(tb._r,tb._g,tb._b,tb._is_set));
-                p_new.setFillColor(new Color(255,255,255,true));
+                p_new.setBorderColor(new Color(tb.red,tb.green,tb.blue,tb.getAlpha(),tb.isSet));
+                p_new.setFillColor(new Color(255,255,255,255,true));
             }
 
             // gpc_vertex_list contour=gpc_vertex_list_array.frompointer(result.getContour()).getitem(j);
@@ -1631,8 +1629,8 @@ public class Drawing implements IEntity<Long>{
 
                     //when creating (a) new primitive(s), let it contain all primitives that p_j contained (doesn't matter that this isn't always true, it is used to reset the height of the contained objects)
 
-                    p_new.setBorderColor(new Color(t2b._r,t2b._g,t2b._b,t2b._is_set));
-                    p_new.setFillColor(new Color(t2f._r,t2f._g,t2f._b,t2f._is_set));
+                    p_new.setBorderColor(new Color(t2b.red,t2b.green,t2b.blue,t2b.getAlpha(),t2b.isSet));
+                    p_new.setFillColor(new Color(t2f.red,t2f.green,t2f.blue,t2b.getAlpha(),t2f.isSet));
 
                     //gpc_vertex_list contour=gpc_vertex_list_array.frompointer(result.getContour()).getitem(j);
                     //create the polygon
@@ -1657,8 +1655,8 @@ public class Drawing implements IEntity<Long>{
 
                     //when creating (a) new primitive(s), let it contain all primitives that p_j contained (doesn't matter that this isn't always true, it is used to reset the height of the contained objects)
 
-                    p_new.setBorderColor(new Color(t2b._r,t2b._g,t2b._b,t2b._is_set));
-                    p_new.setFillColor(new Color(255,255,255,true));
+                    p_new.setBorderColor(new Color(t2b.red,t2b.green,t2b.blue,t2b.getAlpha(),t2b.isSet));
+                    p_new.setFillColor(new Color(255,255,255,255,true));
 
                     //gpc_vertex_list contour=gpc_vertex_list_array.frompointer(result.getContour()).getitem(j);
                     //create the polygon

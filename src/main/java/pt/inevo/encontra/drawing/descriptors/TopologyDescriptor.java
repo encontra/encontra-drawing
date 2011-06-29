@@ -2,12 +2,9 @@ package pt.inevo.encontra.drawing.descriptors;
 
 
 import pt.inevo.encontra.common.distance.DistanceMeasure;
-import pt.inevo.encontra.common.distance.EuclideanDistanceMeasure;
-import pt.inevo.encontra.common.distance.SquaredEuclideanDistanceMeasure;
 import pt.inevo.encontra.descriptors.Descriptor;
 import pt.inevo.encontra.drawing.Drawing;
 import pt.inevo.encontra.index.Vector;
-import pt.inevo.encontra.storage.IEntry;
 
 import java.io.Serializable;
 
@@ -79,7 +76,6 @@ public class TopologyDescriptor<O extends Drawing> extends Vector<Double> implem
     public void setValue(Object o) {
         Vector<Double> val =  (Vector<Double>)o;
         this.setValues(val.getValues());
-
     }
 
     @Override
