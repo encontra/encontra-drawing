@@ -1,6 +1,12 @@
 package pt.inevo.encontra.drawing.descriptors.Topogeo;
 
+import edu.uci.ics.jung.graph.util.EdgeType;
+import pt.inevo.encontra.drawing.Primitive;
+import pt.inevo.encontra.drawing.geometry.CIGeometric;
 import pt.inevo.encontra.graph.Graph;
+
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * This class represents a topology graph for a SVG file. An instance of this
@@ -71,53 +77,68 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
      * @param drawing the drawing to be represented.
      */
 //    @Override
-//    public void initialize(Drawing drawing) {
-//        TopogeoNode node;
-//        ArrayList<Primitive> primitives = drawing.getPrimitivesSortedX();
-//        setRoot(new TopogeoNode());
-//        double xmin, ymin, xmax, ymax;
-//        xmin = drawing.getXmin();
-//        xmax = drawing.getXmax();
-//        ymin = drawing.getYmin();
-//        ymax = drawing.getYmax();
-////        getRoot().getPrimitive().setXmin(xmin);
-////        getRoot().getPrimitive().setXmax(xmax);
-////        getRoot().getPrimitive().setYmin(ymin);
-////        getRoot().getPrimitive().setYmax(ymax);
-//
-//        getRoot().getPrimitive().addPoint(xmin, ymin);
-//        getRoot().getPrimitive().addPoint(xmax, ymin);
-//        getRoot().getPrimitive().addPoint(xmax, ymax);
-//        getRoot().getPrimitive().addPoint(xmin, ymax);
-//        getRoot().getPrimitive().addPoint(xmin, ymin);
-//        getRoot().getPrimitive().setSvgId("root");
-//
-//        graph.addVertex(getRoot());
-//        nodes.add(getRoot());
-//
-//        // add feature nodes
-//        for (TopogeoNode fn : featureNodes) {
-//            graph.addVertex(fn);
-//            nodes.add(fn);
-//        }
-//
-//        // add all nodes and set them as children from the root node
-//        for (Iterator<Primitive> i = primitives.iterator(); i.hasNext();) {
-//            node = new TopogeoNode();
-//            node.setPrimitive(i.next());
-//            getNodes().add(node);
-//            graph.addVertex(node);
-//            double[] descriptor = DescriptorFactory.getInstance().generateGeometryDescriptor(node.getPrimitive());
-//            if (descriptor.length == featureNodes.length)
-//            {
-//                for (int j = 0; j < descriptor.length; j++)
-//                {
-//                    graph.addEdge(new TopogeoEdge((float)descriptor[j]*1.0f, TopogeoEdge.Type.Feature), featureNodes[j], node, EdgeType.UNDIRECTED);
-//                }
-//            } // else, something really wrong happened...
-//            setParent(node, getRoot());
-//        }
-//    }
+    public void initialize(Drawing drawing) {
+        TopogeoNode node;
+        List<Primitive> primitives = drawing.getPrimitivesSortedX();
+        setRoot(new TopogeoNode());
+        double xmin, ymin, xmax, ymax;
+        xmin = drawing.getXmin();
+        xmax = drawing.getXmax();
+        ymin = drawing.getYmin();
+        ymax = drawing.getYmax();
+
+        getRoot().getPrimitive().addPoint(xmin, ymin);
+        getRoot().getPrimitive().addPoint(xmax, ymin);
+        getRoot().getPrimitive().addPoint(xmax, ymax);
+        getRoot().getPrimitive().addPoint(xmin, ymax);
+        getRoot().getPrimitive().addPoint(xmin, ymin);
+        getRoot().getPrimitive().setSvgId("root");
+
+        this.addVertex(getRoot());
+        this.addNode(getRoot());
+
+        // add feature nodes
+        for (TopogeoNode fn : featureNodes) {
+            this.addVertex(fn);
+            this.addNode(fn);
+        }
+
+        // add all nodes and set them as children from the root node
+        for (Iterator<Primitive> i = primitives.iterator(); i.hasNext();) {
+            node = new TopogeoNode();
+            node.setPrimitive(i.next());
+            this.addNode(node);
+            this.addVertex(node);
+
+            // TODO must pass this line to the outside, for now just to copy the Gabriel's Code
+            Double[] descriptor = generateGeometryDescriptor(node.getPrimitive());
+            if (descriptor.length == featureNodes.length)
+            {
+                for (int j = 0; j < descriptor.length; j++)
+                {
+                    this.addEdge(new TopogeoEdge(new Double(descriptor[j] * 1.0f).floatValue(), TopogeoEdge.Type.Feature), featureNodes[j], node, EdgeType.UNDIRECTED);
+                }
+            } // else, something really wrong happened...
+            setParent(node, getRoot());
+        }
+    }
+
+    private Double[] generateGeometryDescriptor(Primitive primitive) {
+        int numPoints = primitive.getNumPoints();
+        if (numPoints > 0) {
+            CIGeometric g = new CIGeometric();
+            g.newScribble();
+            g.newStroke();
+            for (int i = 0; i < numPoints; i++) {
+                g.addPoint(primitive.getPoint(i).getX(), primitive.getPoint(i).getY());
+            }
+            Double [] desc = new Double[1];
+            return g.geometricFeatures().toArray(desc);
+        }
+        else {
+            return null;
+        }
+    }
 
     /**
      * Sets a parental relationship between two nodes.
@@ -254,7 +275,7 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
     }
 
     public void dispose() {
-        clearVerticesList();
+//        clearVerticesList();
         root = null;
     }
 }

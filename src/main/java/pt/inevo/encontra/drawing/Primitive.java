@@ -1056,3 +1056,4 @@ public class Primitive implements HasDistance<Primitive> {
         return prim;
     }
 }
+

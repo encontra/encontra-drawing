@@ -4,7 +4,6 @@ package pt.inevo.encontra.drawing.geometry.descriptors;
 import pt.inevo.encontra.drawing.Drawing;
 import pt.inevo.encontra.drawing.Primitive;
 import pt.inevo.encontra.drawing.geometry.CIGeometric;
-import pt.inevo.encontra.index.IndexedObject;
 import pt.inevo.encontra.index.Vector;
 import pt.inevo.encontra.storage.IEntry;
 
@@ -23,7 +22,6 @@ public class DrawingGeometry implements IEntry<Long,List<Vector>> {
         setId(drawing.getId());
         setValue(getGeometry(drawing));
     }
-
 
     public List<Vector> getGeometry(Drawing drawing) {
         /*

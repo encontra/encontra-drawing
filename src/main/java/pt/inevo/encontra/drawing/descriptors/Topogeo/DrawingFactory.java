@@ -16,6 +16,7 @@ import org.apache.batik.parser.ParseException;
 import org.apache.batik.parser.PathHandler;
 import org.apache.batik.parser.PathParser;
 import org.apache.batik.util.SVGConstants;
+import org.apache.xerces.parsers.SAXParser;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.svg.*;
@@ -23,7 +24,6 @@ import pt.inevo.encontra.drawing.Primitive;
 import pt.inevo.encontra.drawing.util.Color;
 import pt.inevo.encontra.geometry.Point;
 
-import javax.xml.parsers.SAXParser;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -157,9 +157,9 @@ public class DrawingFactory {
         FileReader reader = new FileReader(filePath);
         String ns = SVGDOMImplementation.SVG_NAMESPACE_URI;
         String parser = SAXParser.class.getCanonicalName();//XMLResourceDescriptor.getXMLParserClassName(); //devolve null
+//        String parser = XMLResourceDescriptor.getXMLParserClassName();
         SAXSVGDocumentFactory f = new SAXSVGDocumentFactory(parser);
         SVGDocument doc = f.createSVGDocument(ns, reader);
-
 
         // boot the CSS engine to get Batik to compute the CSS
         UserAgentAdapter userAgent = new UserAgentAdapter();

@@ -1022,14 +1022,14 @@ public class Drawing {
         return drawing;
     }
 
-    /**
-     * Releases the resources used by this drawing.
-     */
-    public void dispose() {
-        for (int i = 0; i < primitives.size(); i++) {
-//            primitives.get(i).dispose();
-            primitives.set(i, null);
-        }
-        primitives = null;
-    }
+//    /**
+//     * Releases the resources used by this drawing.
+//     */
+//    public void dispose() {
+//        for (int i = 0; i < primitives.size(); i++) {
+////            primitives.get(i).dispose();
+//            primitives.set(i, null);
+//        }
+//        primitives = null;
+//    }
 }
