@@ -17,7 +17,7 @@ public class Color {
     public int red,   //!< red
             green,   //!< green
             blue,   //!< blue
-            alpha;  //alpha value
+            alpha = 255;  //alpha value
 
     public boolean isSet;
 
@@ -30,10 +30,11 @@ public class Color {
     }
 
     public Color(Color colorValue, boolean isSet) {
-        this.red = colorValue.getRed();
-        this.green = colorValue.getGreen();
-        this.blue = colorValue.getBlue();
-        this.isSet = isSet;
+//        this.red = colorValue.getRed();
+//        this.green = colorValue.getGreen();
+//        this.blue = colorValue.getBlue();
+//        this.isSet = isSet;
+        this(colorValue.getRed(), colorValue.getGreen(), colorValue.getBlue(), colorValue.getAlpha(), isSet);
     }
 
     public Color(Color colorValue) {
@@ -128,6 +129,7 @@ public class Color {
         green = g;
         blue = b;
         this.isSet = isSet;
+        this.alpha = (a > 1)? a / 255 : a;
 
         //normalise
         double r_n = r / 255.0; //

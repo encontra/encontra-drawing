@@ -57,7 +57,7 @@ public class TopogeoDescriptorExtractor extends DescriptorExtractor<IndexedObjec
         TopogeoGraph graph = new TopogeoGraph(new Long(drawing.getId()));
         graph.initialize(drawing);
 
-        List<TopogeoNode> nodes = graph.getVerticesList();
+        List<TopogeoNode> nodes = new ArrayList(graph.getVertices());
         TopogeoNode a, b;
 
         for (int i = 0; i < nodes.size() - 1; i++) {
@@ -103,8 +103,8 @@ public class TopogeoDescriptorExtractor extends DescriptorExtractor<IndexedObjec
                 theOtherNode = includedNodes.get(j);
                 theOtherIndex = indexMap.get(theOtherNode);
                 //using geometry, because the useGeometry property doesn't exists here
-                theValue = graph.findParentalEdge(theOtherNode, currentNode).getValue();
-//                theValue = 1.0;
+//                theValue = graph.findParentalEdge(theOtherNode, currentNode).getValue();
+                theValue = 1.0;
                 mat[currentIndex][theOtherIndex] = theValue;
                 mat[theOtherIndex][currentIndex] = theValue;
             }

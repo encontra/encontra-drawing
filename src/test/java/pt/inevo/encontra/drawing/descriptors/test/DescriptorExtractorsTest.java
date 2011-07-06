@@ -37,6 +37,7 @@ public class DescriptorExtractorsTest extends TestCase {
 
         TopogeoDescriptorExtractor extractor = new TopogeoDescriptorExtractor();
         pt.inevo.encontra.drawing.descriptors.Topogeo.Drawing dr = DrawingFactory.getInstance().drawingFromSVG(testFilePath);
+
         dr.setId(idx.getId().intValue());
         idx.setValue(dr);
 

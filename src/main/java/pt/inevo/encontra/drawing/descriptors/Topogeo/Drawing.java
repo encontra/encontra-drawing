@@ -999,13 +999,13 @@ public class Drawing {
                     ypoints[i] = (int)((point.getY() - ymin) * yratio);
                 }
                 Polygon p = new Polygon(xpoints, ypoints, len);
-//                g2d.setColor(fill);
-                alpha = (float) ((float) fill.getAlpha() / 255.0f);
+                g2d.setColor(new java.awt.Color(fill.getRed(), fill.getGreen(), fill.getBlue()));
+                alpha = fill.getAlpha(); //already in the [0,1] interval
                 g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
                 g2d.fillPolygon(p);
-                alpha = (float) ((float) stroke.getAlpha() / 255.0f);
+                alpha = stroke.getAlpha();  //already in the [0,1] interval
                 g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-//                g2d.setColor(stroke);
+                g2d.setColor(new java.awt.Color(stroke.getRed(), stroke.getGreen(), stroke.getBlue()));
                 g2d.drawPolyline(xpoints, ypoints, len);
             }
         }
