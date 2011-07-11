@@ -10,7 +10,6 @@ public class CIGeometric {
     private static int MAX_FEAT1 = 11;
     private static int MAX_FEAT2 = 17;
 
-
     private CIEvaluate _feat;
     private CIScribble _sc;	//!< Scribbles, are made up of strokes.
     private CIStroke _stroke;	//!< Strokes, are made up of points.

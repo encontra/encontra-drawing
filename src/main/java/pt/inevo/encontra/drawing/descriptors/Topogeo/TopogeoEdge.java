@@ -9,13 +9,18 @@ import pt.inevo.encontra.graph.GraphEdge;
  * @author Gabriel
  */
 public class TopogeoEdge extends GraphEdge {
+//public class TopogeoEdge extends GraphInclusionEdge {
 
     private float value;
     private Type type;
 
     @Override
     public EdgeType getType() {
-        return EdgeType.DIRECTED;
+        if (type.equals(Type.Parental) || type.equals(Type.Adjacency)) {
+            return EdgeType.DIRECTED;
+        } else {
+            return EdgeType.UNDIRECTED;
+        }
     }
 
     /*

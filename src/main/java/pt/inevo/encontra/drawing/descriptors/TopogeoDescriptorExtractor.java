@@ -5,13 +5,12 @@ import cern.colt.matrix.DoubleFactory2D;
 import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
 import cern.colt.matrix.linalg.EigenvalueDecomposition;
-import org.apache.commons.lang.ArrayUtils;
 import pt.inevo.encontra.descriptors.DescriptorExtractor;
-import pt.inevo.encontra.drawing.descriptors.Topogeo.Drawing;
+import pt.inevo.encontra.drawing.Drawing;
 import pt.inevo.encontra.drawing.descriptors.Topogeo.TopogeoGraph;
 import pt.inevo.encontra.drawing.descriptors.Topogeo.TopogeoNode;
+import pt.inevo.encontra.graph.swing.GraphViewer;
 import pt.inevo.encontra.index.IndexedObject;
-import pt.inevo.encontra.index.Vector;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,7 +22,7 @@ import java.util.List;
  */
 public class TopogeoDescriptorExtractor extends DescriptorExtractor<IndexedObject<Long, Drawing>, TopogeoDescriptor> {
 
-    private int MAXVAL = 50; // TODO Gabe: Rever normalização
+    private int MAXVAL = 250; // TODO Gabe: Rever normalização
 
     @Override
     protected IndexedObject<Long, Drawing> setupIndexedObject(TopogeoDescriptor descriptor, IndexedObject<Long, Drawing> object) {
@@ -37,40 +36,44 @@ public class TopogeoDescriptorExtractor extends DescriptorExtractor<IndexedObjec
 
         //generate the graph and calculate the descriptor
         TopogeoGraph graph = generateTopogeoGraph(drawing);
-        DoubleMatrix2D matrix = generateMatrix(graph);
-        double [] descriptorD = generateDescriptor(matrix);
 
-        //set the descriptor (as a vector)
+        GraphViewer graphViewer = new GraphViewer(graph);
+        graphViewer.show();
+
+//        DoubleMatrix2D matrix = generateMatrix(graph);
+//        double [] descriptorD = generateDescriptor(matrix);
+//
+//        //set the descriptor (as a vector)
         TopogeoDescriptor descriptor = new TopogeoDescriptor();
-        descriptor.setId(drawing.getId());
-        Vector<Double> d = new Vector<Double>(Double.class, descriptorD.length);
-        d.setValues(ArrayUtils.toObject(descriptorD));
-
-        descriptor.setValue(d);
-
+//        descriptor.setId(drawing.getId());
+//        Vector<Double> d = new Vector<Double>(Double.class, descriptorD.length);
+//        d.setValues(ArrayUtils.toObject(descriptorD));
+//
+//        descriptor.setValue(d);
+//
         return descriptor;
     }
 
-    public TopogeoGraph generateTopogeoGraph(Drawing drawing) {
+    public TopogeoGraph generateTopogeoGraph(Drawing drawing){
         // SVG -> Graph. Ver:
         // dbbuilder.cpp::main(), sbrclassify.cpp -> SbrClassify::classify(Drawing &drawing, NBtree &nbt)
-        TopogeoGraph graph = new TopogeoGraph(new Long(drawing.getId()));
+        TopogeoGraph graph = new TopogeoGraph(drawing.getId());
         graph.initialize(drawing);
 
-        List<TopogeoNode> nodes = new ArrayList(graph.getVertices());
+        ArrayList<TopogeoNode> nodes = new ArrayList(graph.getVertices());
         TopogeoNode a, b;
 
-        for (int i = 0; i < nodes.size() - 1; i++) {
+        for (int i = 0; i < nodes.size()-1; i++) {
             a = nodes.get(i);
             if (a.getPrimitive().getId() == TopogeoNode.FEATURE_NODE)
-                continue;
-            for (int j = i + 1; j < nodes.size(); j++) {
+                    continue;
+            for(int j = i+1; j < nodes.size(); j++) {
                 b = nodes.get(j);
                 if (b.getPrimitive().getId() == TopogeoNode.FEATURE_NODE)
                     continue;
                 if (a.getPrimitive().isInPrimitive(b.getPrimitive()))
                     graph.setParent(a, b);
-                else if (b.getPrimitive().isInPrimitive(a.getPrimitive()))
+                else if(b.getPrimitive().isInPrimitive(a.getPrimitive()))
                     graph.setParent(b, a);
             }
         }
@@ -103,8 +106,8 @@ public class TopogeoDescriptorExtractor extends DescriptorExtractor<IndexedObjec
                 theOtherNode = includedNodes.get(j);
                 theOtherIndex = indexMap.get(theOtherNode);
                 //using geometry, because the useGeometry property doesn't exists here
-//                theValue = graph.findParentalEdge(theOtherNode, currentNode).getValue();
-                theValue = 1.0;
+                theValue = graph.findParentalEdge(theOtherNode, currentNode).getValue();
+//                theValue = 1.0;
                 mat[currentIndex][theOtherIndex] = theValue;
                 mat[theOtherIndex][currentIndex] = theValue;
             }

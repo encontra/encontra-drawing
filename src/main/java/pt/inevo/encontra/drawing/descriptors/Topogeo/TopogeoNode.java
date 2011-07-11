@@ -19,23 +19,21 @@ public class TopogeoNode extends GraphNode {
     /**
      * Feature node ID
      */
-    public static short FEATURE_NODE = -1;
-    public static short ROOT_NODE = 0;
+    public static Long FEATURE_NODE = -1l;
+    public static Long ROOT_NODE = 0l;
 
     /**
      * Creates a new empty node.
      */
     public TopogeoNode() {
-        primitive = new Primitive(0);
-        parent = null;
-        children = new ArrayList<TopogeoNode>();
-        siblings = new ArrayList<TopogeoNode>();
+        this(new Long(0), "");
     }
 
     /**
      * Creates a new empty node.
      */
-    public TopogeoNode(int id, String svgid) {
+    public TopogeoNode(Long id, String svgid) {
+        super(id);
         primitive = new Primitive(id);
         primitive.setSvgId(svgid);
         parent = null;

@@ -1,4 +1,4 @@
-package pt.inevo.encontra.drawing.descriptors.Topogeo;
+package pt.inevo.encontra.drawing;
 
 import org.apache.batik.bridge.BridgeContext;
 import org.apache.batik.bridge.DocumentLoader;
@@ -20,8 +20,8 @@ import org.apache.xerces.parsers.SAXParser;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.svg.*;
-import pt.inevo.encontra.drawing.Primitive;
 import pt.inevo.encontra.drawing.util.Color;
+import pt.inevo.encontra.drawing.util.Functions;
 import pt.inevo.encontra.geometry.Point;
 
 import java.io.FileNotFoundException;
@@ -39,7 +39,7 @@ public class DrawingFactory {
     private static final DrawingFactory INSTANCE = new DrawingFactory();
     private int CURVE_SEGMENTATION;
     private boolean simplified;
-    private int count;
+    private long count;
     private Simplification simplification;
 
     //private Pattern findDpath;
@@ -349,7 +349,7 @@ public class DrawingFactory {
                 P3 = transformPoint(P3, mat);
 
                 // find a representative number of points from the curv
-                ArrayList<Point> points = Util.findPointsCubicBezier(
+                ArrayList<Point> points = Functions.findPointsCubicBezier(
                         new pt.inevo.encontra.geometry.Point(P0.getX(), P0.getY()),
                         new pt.inevo.encontra.geometry.Point(P1.getX(), P1.getY()),
                         new pt.inevo.encontra.geometry.Point(P2.getX(), P2.getY()),
@@ -363,8 +363,8 @@ public class DrawingFactory {
                 }
 
                 // set last point
-                lastPoint.setX((float)P3.getX());
-                lastPoint.setY((float)P3.getY());
+                lastPoint.setX(P3.getX());
+                lastPoint.setY(P3.getY());
                 if (firstPoint == null)
                     firstPoint = lastPoint;
             }
@@ -541,10 +541,10 @@ public class DrawingFactory {
 
                 if (primitive.getNumPoints() > 1) {
                     // cout << "path added" << endl;
-                    // cout << drawing->getPrimitives()->size() << endl;
+                    // cout << drawing->getAllPrimitives()->size() << endl;
                     primitive.setBorderColor(new Color(0,0,0, 1));  //BLACK color
                     drawing.addPrimitive(primitive);
-                    // cout << drawing->getPrimitives()->size() << endl;
+                    // cout << drawing->getAllPrimitives()->size() << endl;
                 } else {
                     System.err.println("path empty");
                 }
@@ -573,10 +573,10 @@ public class DrawingFactory {
 
             if (primitive.getNumPoints() > 1) {
                 // cout << "path added" << endl;
-                // cout << drawing->getPrimitives()->size() << endl;
+                // cout << drawing->getAllPrimitives()->size() << endl;
                 primitive.setBorderColor(new Color(new Color(0,0,0, 1))); // BLACK color for now TODO falta a cor???
                 drawing.addPrimitive(primitive);
-                // cout << drawing->getPrimitives()->size() << endl;
+                // cout << drawing->getAllPrimitives()->size() << endl;
             } else {
                 System.err.println("path empty");
             }
@@ -584,6 +584,7 @@ public class DrawingFactory {
         }
         if (this.simplified)
             drawing.simplify(simplification);
+//            drawing.simplify();
 	return drawing;
     }
 
@@ -867,7 +868,7 @@ public class DrawingFactory {
                 Point P3 = new Point(lastPoint.getX() + x, lastPoint.getY() + y);
 
                 // find a representative number of points from the curv
-                ArrayList<Point> points = Util.findPointsCubicBezier(P0, P1, P2, P3, CURVE_SEGMENTATION);
+                ArrayList<Point> points = Functions.findPointsCubicBezier(P0, P1, P2, P3, CURVE_SEGMENTATION);
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
@@ -892,7 +893,7 @@ public class DrawingFactory {
                 Point P3 = new Point(x, y);
 
                 // find a representative number of points from the curv
-                ArrayList<Point> points = Util.findPointsCubicBezier(P0, P1, P2, P3, CURVE_SEGMENTATION);
+                ArrayList<Point> points = Functions.findPointsCubicBezier(P0, P1, P2, P3, CURVE_SEGMENTATION);
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
@@ -911,12 +912,12 @@ public class DrawingFactory {
             public void curvetoCubicSmoothRel(float x2, float y2,
                                               float x, float y) throws ParseException { // s
                 Point P0 = lastPoint;
-                Point P1 = Util.reflectControlPoint(lastControlPoint, lastPoint);
+                Point P1 = Functions.reflectControlPoint(lastControlPoint, lastPoint);
                 Point P2 = new Point(lastPoint.getX() + x2, lastPoint.getY() + y2);
                 Point P3 = new Point(lastPoint.getX() + x, lastPoint.getY() + y);
 
                 // find a representative number of points from the curv
-                ArrayList<Point> points = Util.findPointsCubicBezier(P0, P1, P2, P3, CURVE_SEGMENTATION);
+                ArrayList<Point> points = Functions.findPointsCubicBezier(P0, P1, P2, P3, CURVE_SEGMENTATION);
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
@@ -935,12 +936,12 @@ public class DrawingFactory {
             public void curvetoCubicSmoothAbs(float x2, float y2,
                                               float x, float y) throws ParseException { // S
                 Point P0 = lastPoint;
-                Point P1 = Util.reflectControlPoint(lastControlPoint, lastPoint);
+                Point P1 = Functions.reflectControlPoint(lastControlPoint, lastPoint);
                 Point P2 = new Point(x2, y2);
                 Point P3 = new Point(x, y);
 
                 // find a representative number of points from the curv
-                ArrayList<Point> points = Util.findPointsCubicBezier(P0, P1, P2, P3, CURVE_SEGMENTATION);
+                ArrayList<Point> points = Functions.findPointsCubicBezier(P0, P1, P2, P3, CURVE_SEGMENTATION);
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
@@ -963,7 +964,7 @@ public class DrawingFactory {
                 Point P2 = new Point(lastPoint.getX() + x, lastPoint.getY() + y);
 
                 // find a representative number of points from the curv
-                ArrayList<Point> points = Util.findPointsQuadraticBezier(P0, P1, P2, CURVE_SEGMENTATION);
+                ArrayList<Point> points = Functions.findPointsQuadraticBezier(P0, P1, P2, CURVE_SEGMENTATION);
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
@@ -988,7 +989,7 @@ public class DrawingFactory {
                 Point P2 = new Point(x, y);
 
                 // find a representative number of points from the curv
-                ArrayList<Point> points = Util.findPointsQuadraticBezier(P0, P1, P2, CURVE_SEGMENTATION);
+                ArrayList<Point> points = Functions.findPointsQuadraticBezier(P0, P1, P2, CURVE_SEGMENTATION);
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
@@ -1007,11 +1008,11 @@ public class DrawingFactory {
             public void curvetoQuadraticSmoothRel(float x, float y)
                 throws ParseException { // t
                 Point P0 = lastPoint;
-                Point P1 = Util.reflectControlPoint(lastControlPoint, lastPoint);
+                Point P1 = Functions.reflectControlPoint(lastControlPoint, lastPoint);
                 Point P2 = new Point(lastPoint.getX() + x, lastPoint.getY() + y);
 
                 // find a representative number of points from the curv
-                ArrayList<Point> points = Util.findPointsQuadraticBezier(P0, P1, P2, CURVE_SEGMENTATION);
+                ArrayList<Point> points = Functions.findPointsQuadraticBezier(P0, P1, P2, CURVE_SEGMENTATION);
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
@@ -1030,11 +1031,11 @@ public class DrawingFactory {
             public void curvetoQuadraticSmoothAbs(float x, float y)
                 throws ParseException { // T
                 Point P0 = lastPoint;
-                Point P1 = Util.reflectControlPoint(lastControlPoint, lastPoint);
+                Point P1 = Functions.reflectControlPoint(lastControlPoint, lastPoint);
                 Point P2 = new Point(x, y);
 
                 // find a representative number of points from the curv
-                ArrayList<Point> points = Util.findPointsQuadraticBezier(P0, P1, P2, CURVE_SEGMENTATION);
+                ArrayList<Point> points = Functions.findPointsQuadraticBezier(P0, P1, P2, CURVE_SEGMENTATION);
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
@@ -1058,7 +1059,7 @@ public class DrawingFactory {
                 Point end = new Point(x + lastPoint.getX(), y + lastPoint.getY());
 
                 // find a representative number of points from the arc
-                ArrayList<Point> points = Util.findPointsArc(start, rx, ry, xAxisRotation, largeArcFlag, sweepFlag, end, CURVE_SEGMENTATION);
+                ArrayList<Point> points = Functions.findPointsArc(start, rx, ry, xAxisRotation, largeArcFlag, sweepFlag, end, CURVE_SEGMENTATION);
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
@@ -1079,7 +1080,7 @@ public class DrawingFactory {
                 Point end = new Point(x, y);
 
                 // find a representative number of points from the arc
-                ArrayList<Point> points = Util.findPointsArc(start, rx, ry, xAxisRotation, largeArcFlag, sweepFlag, end, CURVE_SEGMENTATION);
+                ArrayList<Point> points = Functions.findPointsArc(start, rx, ry, xAxisRotation, largeArcFlag, sweepFlag, end, CURVE_SEGMENTATION);
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points

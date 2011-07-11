@@ -3,7 +3,7 @@ package pt.inevo.encontra.drawing.descriptors.test;
 import junit.framework.TestCase;
 import org.junit.Test;
 import pt.inevo.encontra.drawing.Drawing;
-import pt.inevo.encontra.drawing.descriptors.Topogeo.DrawingFactory;
+import pt.inevo.encontra.drawing.DrawingFactory;
 import pt.inevo.encontra.drawing.descriptors.TopogeoDescriptor;
 import pt.inevo.encontra.drawing.descriptors.TopogeoDescriptorExtractor;
 import pt.inevo.encontra.index.IndexedObject;
@@ -19,8 +19,8 @@ public class DescriptorExtractorsTest extends TestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        testFilePath = getClass().getResource("/radioactive.svg").getPath();
-        drawing = new Drawing(testFilePath);
+//        testFilePath = getClass().getResource("/radioactive.svg").getPath();
+        testFilePath = getClass().getResource("/classic_house.svg").getPath();
     }
 
     @Override
@@ -31,16 +31,19 @@ public class DescriptorExtractorsTest extends TestCase {
 
     @Test
     public void testTopogeoExtractor() throws IOException {
-        IndexedObject<Long, pt.inevo.encontra.drawing.descriptors.Topogeo.Drawing> idx = new IndexedObject<Long, pt.inevo.encontra.drawing.descriptors.Topogeo.Drawing>();
+        //From the Gabriel Code - radioactive.svg
+        Double [] expectedResult = {0.181,0.101,0.033,0.020,0.020,0.020,0.013};
+
+        IndexedObject<Long, Drawing> idx = new IndexedObject<Long, Drawing>();
         idx.setName("image");
         idx.setId(new Long(1));
 
+        //creating the drawing from the svg file
+        Drawing drawing = DrawingFactory.getInstance().drawingFromSVG(testFilePath);
+        drawing.setId(idx.getId());
+        idx.setValue(drawing);
+
         TopogeoDescriptorExtractor extractor = new TopogeoDescriptorExtractor();
-        pt.inevo.encontra.drawing.descriptors.Topogeo.Drawing dr = DrawingFactory.getInstance().drawingFromSVG(testFilePath);
-
-        dr.setId(idx.getId().intValue());
-        idx.setValue(dr);
-
         TopogeoDescriptor descriptor = extractor.extract(idx);
 
         assertNotNull(descriptor);
@@ -50,6 +53,12 @@ public class DescriptorExtractorsTest extends TestCase {
             System.out.print(values[i] + " ");
         }
         System.out.println();
+
+        for (;;) {
+
+        }
+
+//        Assert.assertArrayEquals(expectedResult, values);
     }
 
     @Test

@@ -101,7 +101,7 @@ public class DrawingTopology implements IEntry<Long,List<Vector>> {
            * the same parent node will be considered adjacent.
            */
 
-        List<GraphNode<Primitive>> nodeList = graph.getVerticesList();
+        List<GraphNode<Primitive>> nodeList = new ArrayList(graph.getVertices());
 
         for(i = 0; i < nodeList.size(); i++) {
             for(j = i+1; j < nodeList.size(); j++) {
@@ -260,7 +260,7 @@ public class DrawingTopology implements IEntry<Long,List<Vector>> {
 
         } else {
             // Compute the descriptor for the entire Graph
-            subgraphDescSet(graph,graph.getVerticesList(), descriptorSet);
+            subgraphDescSet(graph,new ArrayList(graph.getVertices()), descriptorSet);
         }
 
         return descriptorSet;

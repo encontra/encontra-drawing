@@ -11,30 +11,31 @@ import pt.inevo.encontra.drawing.util.Color;
 import pt.inevo.encontra.drawing.util.Functions;
 import pt.inevo.encontra.geometry.Point;
 import pt.inevo.encontra.geometry.Vector;
+import pt.inevo.encontra.storage.IEntity;
 import pt.inevo.jcali.CIListNode;
 import pt.inevo.jcali.CIPoint;
 
 import java.util.ArrayList;
 
-public class Primitive implements HasDistance<Primitive> {
+public class Primitive implements HasDistance<Primitive>, IEntity<Long> {
 
     // Constants uses in the detection of intersections
     public static final int COLLINEAR = 2;
 
-    private ArrayList<Point> _lst_points;    //!< List of points that make up the Primitive
-    private int _id;    //!< Id of the Primitive (root should be zero).
+    private ArrayList<Point> points;    //!< List of points that make up the Primitive
+    private long id;    //!< Id of the Primitive (root should be zero).
     private String svgId;  //he id of the primitive's object on the SVG file - imported from Gabriel Code
 
-    private double _xmin,            //!< x minimum of the Primitive
-            _xmax,            //!< x maximum of the Primitive
-            _ymin,            //!< y minimum of the Primitive
-            _ymax;             //!< y maximum of the Primitive
+    private double xMin,            //!< x minimum of the Primitive
+            xMax,            //!< x maximum of the Primitive
+            yMin,            //!< y minimum of the Primitive
+            yMax;             //!< y maximum of the Primitive
 
-    private boolean _closed;
+    private boolean closed;
     private double borderWidth;
 
     String fillRule;
-    boolean _fillNone;
+    boolean fillNode;
 
     private Color bordercolor;
 
@@ -45,36 +46,38 @@ public class Primitive implements HasDistance<Primitive> {
     }
 
     //  get functions
-    public int getId() {
-        return _id;
+    @Override
+    public Long getId() {
+        return id;
     }
 
-    public void setId(int id) {
-        _id = id;
+    @Override
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public int getNumPoints() {
-        return _lst_points.size();
+        return points.size();
     }
 
     public Point getPoint(int i) {
-        return _lst_points.get(i);
+        return points.get(i);
     }
 
     public double getXmin() {
-        return _xmin;
+        return xMin;
     }
 
     public double getXmax() {
-        return _xmax;
+        return xMax;
     }
 
     public double getYmin() {
-        return _ymin;
+        return yMin;
     }
 
     public double getYmax() {
-        return _ymax;
+        return yMax;
     }
 
     /**
@@ -89,7 +92,7 @@ public class Primitive implements HasDistance<Primitive> {
      *
      * @param id id of primitive
      */
-    public Primitive(int id) {
+    public Primitive(long id) {
         initialise(id);
     }
 
@@ -285,8 +288,8 @@ public class Primitive implements HasDistance<Primitive> {
         initialise(-1);
     }
 
-    public void initialise(int id) {
-        _id = id;
+    public void initialise(long id) {
+        this.id = id;
 
         bordercolor = new Color(false);
         fillcolor = new Color(false);
@@ -297,35 +300,13 @@ public class Primitive implements HasDistance<Primitive> {
         setFillRule("");
         setFillNone(false);
 
-        _xmax = Integer.MIN_VALUE;//numeric_limits<int>::min();
-        _ymax = Integer.MIN_VALUE;//numeric_limits<int>::min();
-        _xmin = Integer.MAX_VALUE;//numeric_limits<int>::max();
-        _ymin = Integer.MAX_VALUE;//numeric_limits<int>::max();
+        xMax = Integer.MIN_VALUE;//numeric_limits<int>::min();
+        yMax = Integer.MIN_VALUE;//numeric_limits<int>::min();
+        xMin = Integer.MAX_VALUE;//numeric_limits<int>::max();
+        yMin = Integer.MAX_VALUE;//numeric_limits<int>::max();
 
-        _lst_points = new ArrayList<Point>();
+        points = new ArrayList<Point>();
     }
-
-    /** Desctructor.
-     */
-    /*
-     Primitive::~Primitive() {
-         int n_items = _lst_points->getNumItems();
-
-         for (int i=0; i<n_items; i++)
-             delete (*_lst_points)[i];
-
-         delete _lst_points;
-
-         if (bordercolor != NULL) {
-             delete bordercolor;
-             bordercolor = NULL;
-         }
-
-         if (fillcolor != NULL) {
-             delete fillcolor;
-             fillcolor = NULL;
-         }
-     }*/
 
     /**
      * Add a new point to the Primitive's list of points.
@@ -348,59 +329,26 @@ public class Primitive implements HasDistance<Primitive> {
         }
 
         // std::cout << "Debug: adding point (" << x << "," << y << ")" << std::endl;
-        _lst_points.add(new Point(x, y));
+        points.add(new Point(x, y));
 
-        if (x < _xmin) _xmin = x;
-        if (x > _xmax) _xmax = x;
-        if (y < _ymin) _ymin = y;
-        if (y > _ymax) _ymax = y;
+        if (x < xMin) xMin = x;
+        if (x > xMax) xMax = x;
+        if (y < yMin) yMin = y;
+        if (y > yMax) yMax = y;
     }
-
-    /**
-     * OBSOLETE SHOULD BE DONE BY USING DEJAFUNCTIONS
-     * Computes the maximum of the three values.
-     *
-     * @param v1 First value.
-     * @param v2 Second value.
-     * @param v3 Third value.
-     * @result The maximum value.
-     */
-    public double maximum(double v1, double v2, double v3) {
-        double v = (v1 > v2) ? v1 : v2;
-        v = (v3 > v) ? v3 : v;
-        return v;
-    }
-
-    /**
-     * OBSOLETE SHOULD BE DONE BY USING DEJAFUNCTIONS
-     * Computes the minimum of the three values.
-     *
-     * @param v1 First value.
-     * @param v2 Second value.
-     * @param v3 Third value.
-     * @result The minimum value.
-     */
-    public double minimum(double v1, double v2, double v3) {
-        double v = (v1 < v2) ? v1 : v2;
-        v = (v3 < v) ? v3 : v;
-        return v;
-    }
-
 
     /**
      * Checks whether the current primitive is completely in the primitive passed to it.
      *
-     * @param p_j The other Primitive.
+     * @param primitive The other Primitive.
      * @return True iff this Primitive is entirely inside the other Primitive, false otherwise.
      */
-    public boolean isInPrimitive(Primitive p_j) {
-        int num_points_p_i = this._lst_points.size();
+    public boolean isInPrimitive(Primitive primitive) {
+        int numPointsPrimitive = this.points.size();
 
-        for (int i = 0; i < num_points_p_i; i++) {
-
-            if (p_j.getNumPoints() > 0) {
-
-                if (!p_j.pointIn(getPoint(i))) {
+        for (int i = 0; i < numPointsPrimitive; i++) {
+            if (primitive.getNumPoints() > 0) {
+                if (!primitive.pointIn(getPoint(i))) {
                     return false;
                 }
             }
@@ -452,45 +400,43 @@ public class Primitive implements HasDistance<Primitive> {
      */
     public boolean pointIn(Point pt) {
         int crossings;
-        int j;
         boolean yflag0, yflag1, inside_flag, xflag0;
         double ty, tx;
         Point vtx0, vtx1;
 
         int numverts = this.getNumPoints();
-        tx = pt.x;
-        ty = pt.y;
+        tx = pt.getX();
+        ty = pt.getY();
 
         vtx0 = this.getPoint(numverts - 1);
         /* get test bit for above/below X axis */
-        yflag0 = (vtx0.y >= ty);
+        yflag0 = (vtx0.getY() >= ty);
         vtx1 = this.getPoint(0);
         int conta_pontos = 0;
 
         crossings = 0;
 
-        for (j = numverts + 1; (--j) > 0; ) {
-
-            yflag1 = (vtx1.y >= ty);
+        for (int j = numverts + 1; j >= 0; --j) {
+            yflag1 = (vtx1.getY() >= ty);
             /* check if endpoints straddle (are on opposite sides) of X axis
-                * (i.e. the Y's differ); if so, +X ray could intersect this edge.
-                */
+            * (i.e. the Y's differ); if so, +X ray could intersect this edge.
+            */
             if (yflag0 != yflag1) {
-                xflag0 = (vtx0.x >= tx);
+                xflag0 = (vtx0.getX() >= tx);
                 /* check if endpoints are on same side of the Y axis (i.e. X's
-                     * are the same); if so, it's easy to test if edge hits or misses.
-                     */
-                if (xflag0 == (vtx1.x >= tx)) {
+                 * are the same); if so, it's easy to test if edge hits or misses.
+                 */
+                if (xflag0 == (vtx1.getX() >= tx)) {
 
                     /* if edge's X values both right of the point, must hit */
 
                     if (xflag0) crossings += (yflag0 ? -1 : 1);
                 } else {
                     /* compute intersection of polygon segment with +X ray, note
-                          * if >= point's X; if so, the ray hits it.
-                          */
-                    if ((vtx1.x - (vtx1.y - ty) *
-                            (vtx0.x - vtx1.x) / (vtx0.y - vtx1.y)) >= tx) {
+                      * if >= point's X; if so, the ray hits it.
+                      */
+                    if ((vtx1.getX() - (vtx1.getY() - ty) *
+                            (vtx0.getX() - vtx1.getX()) / (vtx0.getY() - vtx1.getY())) >= tx) {
                         crossings += (yflag0 ? -1 : 1);
                     }
                 }
@@ -617,7 +563,7 @@ public class Primitive implements HasDistance<Primitive> {
                 mk[i] = 0;
 
             // Vertex Reduction within tolerance of prior vertex cluster
-            vt[0] = _lst_points.get(0);    // Add V[0] to the vertext-buffer.
+            vt[0] = points.get(0);    // Add V[0] to the vertext-buffer.
 
             // Add the important points to the vertex-buffer. I.e. remove all
             // really small lines.
@@ -626,15 +572,15 @@ public class Primitive implements HasDistance<Primitive> {
                 // then or equal to the specified tolerance, add the current vertext to the
                 // vertex-buffer and set the pv to the current index.
 
-                if (_lst_points.get(i).distanceTo(_lst_points.get(pv)) > tol2) {
-                    vt[k++] = _lst_points.get(i);
+                if (points.get(i).distanceTo(points.get(pv)) > tol2) {
+                    vt[k++] = points.get(i);
                     pv = i;
                 }
             }
 
             // Add the last point if it wasn't added already.
             if (pv < n - 1)
-                vt[k++] = _lst_points.get(n - 1);
+                vt[k++] = points.get(n - 1);
 
             // Douglas-Peucker polyline simplification
             mk[0] = 1;      // mark the first
@@ -644,17 +590,17 @@ public class Primitive implements HasDistance<Primitive> {
             CIListNode<CIPoint> it;
             // Clear the original list of CIPoints. Copies are stored in vt[]
             // TODO Clear the list!
-            //for (it = _lst_points.getHeadPosition(); it != null; _lst_points.getNextItem(it))
-            //delete _lst_points->getItemAt(it);
+            //for (it = points.getHeadPosition(); it != null; points.getNextItem(it))
+            //delete points->getItemAt(it);
 
-            //delete _lst_points;
-            _lst_points = new ArrayList<Point>();
+            //delete points;
+            points = new ArrayList<Point>();
 
 
             // Copy marked vertices to the output simplified polyline
             for (i = 0; i < k; i++) {
                 if (mk[i] > 0)
-                    _lst_points.add(vt[i]);
+                    points.add(vt[i]);
             }
 
 
@@ -667,11 +613,11 @@ public class Primitive implements HasDistance<Primitive> {
 
                           int i;
                          for (i=0; i < this->getNumPoints(); i++)
-                             delete (*_lst_points)[i];
+                             delete (*points)[i];
 
-                         delete _lst_points;
+                         delete points;
                          */
-                    _lst_points = new ArrayList<Point>();
+                    points = new ArrayList<Point>();
                 }
             }
 
@@ -729,14 +675,14 @@ public class Primitive implements HasDistance<Primitive> {
      * Returns the height of this Primitive.
      */
     public double getHeight() {
-        return Math.abs(_ymax - _ymin);
+        return Math.abs(yMax - yMin);
     }
 
     /**
      * Returns the width of this Primitive.
      */
     public double getWidth() {
-        return Math.abs(_xmax - _xmin);
+        return Math.abs(xMax - xMin);
     }
 
     /**
@@ -795,11 +741,11 @@ public class Primitive implements HasDistance<Primitive> {
     }
 
     boolean isFillNone() {
-        return _fillNone;
+        return fillNode;
     }
 
     void setFillNone(boolean sf) {
-        _fillNone = sf;
+        fillNode = sf;
     }
 
     void setBorderWidth(float w) {
@@ -842,11 +788,11 @@ public class Primitive implements HasDistance<Primitive> {
     }
 
     public boolean isClosed() {
-        return _closed;
+        return closed;
     }
 
     public void setClosed(boolean closed) {
-        _closed = closed;
+        this.closed = closed;
     }
 
     public double getBorderWidth() {
@@ -889,16 +835,16 @@ public class Primitive implements HasDistance<Primitive> {
 
     public void removeAllPoints() {
         /*
-          int n_items = _lst_points.getNumItems();
+          int n_items = points.getNumItems();
 
           int i=0;
 
           for (i=0; i<n_items; i++) {
-              delete (*_lst_points)[i];
+              delete (*points)[i];
           }
 
-          delete _lst_points;*/
-        _lst_points = new ArrayList<Point>();
+          delete points;*/
+        points = new ArrayList<Point>();
     }
 
     /* TODO - Indagare
@@ -1022,11 +968,12 @@ public class Primitive implements HasDistance<Primitive> {
     }
 
     public ArrayList<Point> getPoints() {
-        return this._lst_points;
+        return this.points;
     }
 
-        /**
+    /**
      * Returns the id of the primitive's object on the SVG file.
+     *
      * @return the id of the primitive's object on the SVG file.
      */
     public String getSvgId() {
@@ -1035,6 +982,7 @@ public class Primitive implements HasDistance<Primitive> {
 
     /**
      * Sets the id of the primitive's object on the SVG file.
+     *
      * @param svgId the id of the primitive's object on the SVG file.
      */
     public void setSvgId(String svgId) {

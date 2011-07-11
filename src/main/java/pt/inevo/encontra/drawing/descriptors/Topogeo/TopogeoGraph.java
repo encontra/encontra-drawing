@@ -1,12 +1,14 @@
 package pt.inevo.encontra.drawing.descriptors.Topogeo;
 
 import edu.uci.ics.jung.graph.util.EdgeType;
+import pt.inevo.encontra.drawing.Drawing;
 import pt.inevo.encontra.drawing.Primitive;
 import pt.inevo.encontra.drawing.geometry.CIGeometric;
 import pt.inevo.encontra.graph.Graph;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * This class represents a topology graph for a SVG file. An instance of this
@@ -42,7 +44,7 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
      * Creates an empty topology graph.
      */
     public TopogeoGraph() {
-        super();
+        this(new Long(0));
     }
 
     /**
@@ -61,7 +63,6 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
         return root;
     }
 
-
     /**
      * Sets the root node of the graph.
      * @param root the root node of the graph.
@@ -77,15 +78,74 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
      * @param drawing the drawing to be represented.
      */
 //    @Override
+//    public void initialize(Drawing drawing) {
+//        TopogeoNode node;
+//        List<Primitive> primitives = drawing.getPrimitivesSortedX();
+//        setRoot(new TopogeoNode());
+//        double xmin, ymin, xmax, ymax;
+//        xmin = drawing.getXmin();
+//        xmax = drawing.getXmax();
+//        ymin = drawing.getYmin();
+//        ymax = drawing.getYmax();
+//
+//        getRoot().getPrimitive().addPoint(xmin, ymin);
+//        getRoot().getPrimitive().addPoint(xmax, ymin);
+//        getRoot().getPrimitive().addPoint(xmax, ymax);
+//        getRoot().getPrimitive().addPoint(xmin, ymax);
+//        getRoot().getPrimitive().addPoint(xmin, ymin);
+//        getRoot().getPrimitive().setSvgId("root");
+//
+//        this.addVertex(getRoot());
+//
+//        // add feature nodes
+////        for (TopogeoNode fn : featureNodes) {
+////            this.addVertex(fn);
+////        }
+//
+//        // add all nodes and set them as children from the root node
+//        for (Iterator<Primitive> i = primitives.iterator(); i.hasNext();) {
+//            node = new TopogeoNode();
+//            Primitive p = i.next();
+//            node.setPrimitive(p);
+//            node.setId(p.getId());
+//            this.addVertex(node);
+//
+//            // TODO must pass this line to the outside, for now just to copy the Gabriel's Code
+////            Double[] descriptor = generateGeometryDescriptor(node.getPrimitive());
+////            if (descriptor.length == featureNodes.length)
+////            {
+////                for (int j = 0; j < descriptor.length; j++)
+////                {
+////                    TopogeoEdge edge = new TopogeoEdge(new Double(descriptor[j] * 1.0f).floatValue(), TopogeoEdge.Type.Feature);
+////                    edge.setSource(featureNodes[j]);
+////                    edge.setDest(node);
+////
+////                    this.addEdge(edge, featureNodes[j], node, EdgeType.UNDIRECTED);
+////                }
+////            } // else, something really wrong happened...
+//            setParent(node, getRoot());
+//        }
+//    }
+
+        /**
+     * Initializes the graph according to the supplied drawing.
+     * In this method, the root node is set, as well as the minimum and maximum
+     * X and Y values. All the primitives are added as children to the root node.
+     * @param drawing the drawing to be represented.
+     */
     public void initialize(Drawing drawing) {
         TopogeoNode node;
-        List<Primitive> primitives = drawing.getPrimitivesSortedX();
+        ArrayList<Primitive> primitives = drawing.getPrimitivesSortedX();
         setRoot(new TopogeoNode());
         double xmin, ymin, xmax, ymax;
         xmin = drawing.getXmin();
         xmax = drawing.getXmax();
         ymin = drawing.getYmin();
         ymax = drawing.getYmax();
+//        getRoot().getPrimitive().setXmin(xmin);
+//        getRoot().getPrimitive().setXmax(xmax);
+//        getRoot().getPrimitive().setYmin(ymin);
+//        getRoot().getPrimitive().setYmax(ymax);
 
         getRoot().getPrimitive().addPoint(xmin, ymin);
         getRoot().getPrimitive().addPoint(xmax, ymin);
@@ -94,31 +154,27 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
         getRoot().getPrimitive().addPoint(xmin, ymin);
         getRoot().getPrimitive().setSvgId("root");
 
-        this.addVertex(getRoot());
-        this.addNode(getRoot());
+        addVertex(getRoot());
 
         // add feature nodes
-        for (TopogeoNode fn : featureNodes) {
-            this.addVertex(fn);
-            this.addNode(fn);
-        }
+//        for (TopogeoNode fn : featureNodes) {
+//            graph.addVertex(fn);
+//            nodes.add(fn);
+//        }
 
         // add all nodes and set them as children from the root node
         for (Iterator<Primitive> i = primitives.iterator(); i.hasNext();) {
             node = new TopogeoNode();
             node.setPrimitive(i.next());
-            this.addNode(node);
-            this.addVertex(node);
-
-            // TODO must pass this line to the outside, for now just to copy the Gabriel's Code
-            Double[] descriptor = generateGeometryDescriptor(node.getPrimitive());
-            if (descriptor.length == featureNodes.length)
-            {
-                for (int j = 0; j < descriptor.length; j++)
-                {
-                    this.addEdge(new TopogeoEdge(new Double(descriptor[j] * 1.0f).floatValue(), TopogeoEdge.Type.Feature), featureNodes[j], node, EdgeType.UNDIRECTED);
-                }
-            } // else, something really wrong happened...
+            addVertex(node);
+//            double[] descriptor = DescriptorFactory.getInstance().generateGeometryDescriptor(node.getPrimitive());
+//            if (descriptor.length == featureNodes.length)
+//            {
+//                for (int j = 0; j < descriptor.length; j++)
+//                {
+//                    graph.addEdge(new TopogeoEdge((float)descriptor[j]*1.0f, TopogeoEdge.Type.Feature), featureNodes[j], node, EdgeType.UNDIRECTED);
+//                }
+//            } // else, something really wrong happened...
             setParent(node, getRoot());
         }
     }
@@ -148,9 +204,9 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
      * operation will fail if one of the nodes is not already present in the
      * graph.
      */
-    public boolean setParent(TopogeoNode child, TopogeoNode newParent) {
-        return setParent(child.getId(), newParent.getId());
-//        if (!graph.containsVertex(child) || !graph.containsVertex(newParent))
+//    public boolean setParent(TopogeoNode child, TopogeoNode newParent) {
+////        return setParent(child.getId(), newParent.getId());
+//        if (!containsVertex(child) || !containsVertex(newParent))
 //            return false;
 //
 //        TopogeoNode currentParent = child.getParent();
@@ -166,7 +222,7 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
 //                    oldSibling = i.next();
 //                    edgeToRemove = findAdjacencyEdge(child, oldSibling);
 //                    if (edgeToRemove != null) {
-//                        graph.removeEdge(edgeToRemove);
+//                        removeEdge(edgeToRemove);
 //                        child.getSiblings().remove(oldSibling);
 //                        oldSibling.getSiblings().remove(child);
 //                    }
@@ -174,7 +230,7 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
 //                // remove the edge linking the old parent to the child;
 //                edgeToRemove = findParentalEdge(child, currentParent);
 //                if (edgeToRemove != null) {
-//                    graph.removeEdge(edgeToRemove);
+//                    removeEdge(edgeToRemove);
 //                    child.setParent(null);
 //                    currentParent.getChildren().remove(child);
 //                }
@@ -192,12 +248,80 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
 ////            } // else, something really wrong happened...
 //            // add a new parental link
 //            //graph.addEdge(new TopogeoEdge(geometryHint, TopogeoEdge.Type.Parental), newParent, child, EdgeType.DIRECTED);
-//            graph.addEdge(new TopogeoEdge(1.0f, TopogeoEdge.Type.Parental), newParent, child, EdgeType.DIRECTED);
+//
+//            TopogeoEdge edge = new TopogeoEdge(1.0f, TopogeoEdge.Type.Parental);
+//            edge.setSource(newParent);
+//            edge.setDest(child);
+//            addEdge(edge, newParent, child, EdgeType.DIRECTED);
 //            newParent.getChildren().add(child);
 //            child.setParent(newParent);
-//            // add new adjacency links to the new siblings
+////            add new adjacency links to the new siblings
 //            Collection<TopogeoNode> siblings = new ArrayList(newParent.getChildren());
 //            siblings.remove(child);
+////            double diag = newParent.getPrimitive().getDiagonalLength();
+////            float adjacencyHint;
+////            TopogeoNode sibling = null;
+////            // make a new adjacency link between the new child and all other siblings.
+////            for (Iterator<TopogeoNode> i = siblings.iterator(); i.hasNext();) {
+////                sibling = i.next();
+////                adjacencyHint = (float)generateAdjacencyValue(diag, child.getPrimitive(), sibling.getPrimitive());
+////                addEdge(new TopogeoEdge(adjacencyHint, TopogeoEdge.Type.Adjacency), child, sibling, EdgeType.UNDIRECTED);
+////                child.getSiblings().add(sibling);
+////                sibling.getSiblings().add(child);
+////            }
+//        }
+//        return true;
+//    }
+
+    public boolean setParent(TopogeoNode child, TopogeoNode newParent) {
+        if (!containsVertex(child) || !containsVertex(newParent))
+            return false;
+
+        TopogeoNode currentParent = child.getParent();
+        // only if current parent is different from the new parent
+        if (currentParent == null || !currentParent.equals(newParent)) {
+            // remove the adjacency links to the old siblings
+            if (currentParent != null)
+            {
+                TopogeoEdge edgeToRemove = null;
+                Collection<TopogeoNode> oldSiblings = new ArrayList<TopogeoNode>(child.getSiblings());
+                TopogeoNode oldSibling = null;
+                for (Iterator<TopogeoNode> i = oldSiblings.iterator(); i.hasNext();) {
+                    oldSibling = i.next();
+                    edgeToRemove = findAdjacencyEdge(child, oldSibling);
+                    if (edgeToRemove != null) {
+                        removeEdge(edgeToRemove);
+                        child.getSiblings().remove(oldSibling);
+                        oldSibling.getSiblings().remove(child);
+                    }
+                }
+                // remove the edge linking the old parent to the child;
+                edgeToRemove = findParentalEdge(child, currentParent);
+                if (edgeToRemove != null) {
+                    removeEdge(edgeToRemove);
+                    child.setParent(null);
+                    currentParent.getChildren().remove(child);
+                }
+            }
+            // compute geometry hint
+//            double[] descriptor = DescriptorFactory.getInstance().generateGeometryDescriptor(child.getPrimitive());
+//            double geometryHint = DescriptorFactory.getInstance().generateHint(descriptor);
+//            // create links between the node and the geometric features
+//            if (descriptor.length == featureNodes.length)
+//            {
+//                for (int i = 0; i < descriptor.length; i++)
+//                {
+//                    graph.addEdge(new TopogeoEdge(descriptor[i], TopogeoEdge.Type.Feature), featureNodes[i], child, EdgeType.UNDIRECTED);
+//                }
+//            } // else, something really wrong happened...
+            // add a new parental link
+            //graph.addEdge(new TopogeoEdge(geometryHint, TopogeoEdge.Type.Parental), newParent, child, EdgeType.DIRECTED);
+            addEdge(new TopogeoEdge(1.0f, TopogeoEdge.Type.Parental), newParent, child, EdgeType.DIRECTED);
+            newParent.getChildren().add(child);
+            child.setParent(newParent);
+            // add new adjacency links to the new siblings
+            Collection<TopogeoNode> siblings = new ArrayList(newParent.getChildren());
+            siblings.remove(child);
 //            double diag = newParent.getPrimitive().getDiagonalLength();
 //            float adjacencyHint;
 //            TopogeoNode sibling = null;
@@ -209,8 +333,20 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
 //                child.getSiblings().add(sibling);
 //                sibling.getSiblings().add(child);
 //            }
-//        }
-//        return true;
+        }
+        return true;
+    }
+
+    /**
+     * Generates the adjacency value between two sibling primitives on a graph.
+     * @param parentDiagonal the diagonal distance of the parent primitive.
+     * @param child1 one of the siblings.
+     * @param child2 the other sigling.
+     * @return the adjacency value.
+     */
+    public double generateAdjacencyValue(double parentDiagonal, Primitive child1, Primitive child2) {
+        double dist = child1.getShortestDistance(child2);
+        return (parentDiagonal - dist) / parentDiagonal;
     }
 
     /**
@@ -272,10 +408,5 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
                 .append(System.getProperty("line.separator"));
         stringBuffer.append(this.toString());
         return stringBuffer.toString();
-    }
-
-    public void dispose() {
-//        clearVerticesList();
-        root = null;
     }
 }

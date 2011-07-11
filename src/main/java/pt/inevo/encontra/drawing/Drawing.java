@@ -2,440 +2,66 @@ package pt.inevo.encontra.drawing;
 
 import com.seisw.util.geom.Poly;
 import com.seisw.util.geom.PolyDefault;
-import org.apache.batik.bridge.BridgeContext;
-import org.apache.batik.bridge.DocumentLoader;
-import org.apache.batik.bridge.GVTBuilder;
-import org.apache.batik.bridge.UserAgentAdapter;
-import org.apache.batik.dom.svg.*;
-import org.apache.batik.gvt.GraphicsNode;
-import org.apache.batik.transcoder.TranscoderException;
-import org.apache.batik.transcoder.TranscoderInput;
-import org.apache.batik.transcoder.TranscoderOutput;
-import org.apache.batik.transcoder.image.ImageTranscoder;
-import org.apache.batik.transcoder.image.PNGTranscoder;
-import org.apache.batik.transcoder.svg2svg.SVGTranscoder;
-import org.apache.batik.transcoder.wmf.tosvg.WMFTranscoder;
-import org.apache.batik.util.SVG12Constants;
-import org.apache.batik.util.XMLResourceDescriptor;
-import org.w3c.dom.DOMImplementation;
-import org.w3c.dom.NodeList;
-import org.w3c.dom.svg.SVGDocument;
 import pt.inevo.encontra.drawing.util.Color;
-import pt.inevo.encontra.drawing.util.Functions;
 import pt.inevo.encontra.geometry.Point;
 import pt.inevo.encontra.storage.IEntity;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+/**
+* This class represents a format for vector-based images.
+* @author Gabriel
+*/
+public class Drawing implements IEntity<Long> {
+    private ArrayList<Primitive> primitives;
+    private long id;
 
-public class Drawing implements IEntity<Long>{
-
-    private static Logger _log=Logger.getLogger(Drawing.class.getName());
-    private static int THUMB_WIDTH = 128;
-    private static int THUMB_HEIGHT = 128;
-
-    public static enum FileType{ WMF,SVG }
-
-    // Indagare
-    public static final double MM_TO_PIXEL = 0.3;			//this constant is dependent of the screen resolution!
-    public static final double PT_TO_PIXEL = 1.333;		//this constant is dependent of the screen resolution!
-
-    //polygon/polyline level
-    public static final double HUE_TOL = .015 * 360;       //tollerance for hue of color [0-360>, lucky number
-    public static final double SATURATION_TOL = .20;      //tollerance for saturation of color [0-1], lucky number
-    public static final double INTENSITY_TOL = .6;         //tollerance for intensity of color [0-1], lucky number
-
-    //object level
-    public static final double AREA_TOL = .00025;           //tollerance for area size, lucky number
-    public static final double LINE_TOL = .20;            //total line length relative to length of the main-diagonal, lucky number
-
-    //
-    public static final double SURROUND_TOL_DIST = .006;       //tollerance for distance between two points of different vertices, lucky number (this tells something about how near they two points should be next to each other)
-    public static final double SURROUND_TOL_POINTS = .9;     //tollerance for nr of points that should be within range of the points outer vertices, lucky number (this tells something about how many of the points should match the max_distance-requirement)
-
-    //vertice level
-    public static final double TOL = .002;                 //tollerance for inner vertices relative to length of the main-diagonal, lucky number (the bigger the simpeler)
-    public static final double PRE_TOL = .00075;           //tollerance for inner vertices relative to length of the main-diagonal, lucky number (the bigger the simpeler) Used to simplify before clipping, should not exceed TOL
-    public static final int MAX_COUNT_OPTIMIZE = 20;       //sets modulo for when to pre-optimize
-    public static final int MAX_VERTICES = 1000;           //maximum number of vertices per Primitive
-    public static final double OVER_TOL = 2;               //set <=1 to dissable, this makes it possible to over optimize object wich exist of more then MAX_VERTICES vectices
-
-    //gradient elimination
-    public static final double HUE_DIF = 25;				//maximum difference between hue values to consider similar colors
-    public static final double SATURATION_DIF = .35;		//maximum difference between saturation values to consider similar colors
-    public static final double VALUE_DIF = .15;			//maximum difference between value values to consider similar colors
-
-
-    private List <Primitive> _list_primitives;	//!< List of all the Primitives
-    private List <Primitive> _list_primitives_area; //!< List of all Primitivies ordered by area
-
-    private long _id;
-
-    private  double	_height,_width; 			//!< height,width of the Drawing
-
-    private String _svgNS; // SVG Namespace URI
-    protected SVGDocument _document; // SVGDocument
-
-    public void setId(Long id) { _id = id; } //!< Sets this Drawing's id.
-    public Long getId() { return _id; }; //!< Returns this Drawing's id.
-
-    /** Default constructor.
+    /**
+     * Creates a new Drawing.
      */
     public Drawing() {
-        _width=0;
-        _height=0;
-        _id=-1;
-        _list_primitives=new ArrayList<Primitive>();
-
-        // Obtaining a DOM implementation
-        DOMImplementation dom = SVGDOMImplementation.getDOMImplementation();
-
-        // Creating a Document
-        _svgNS = SVGDOMImplementation.SVG_NAMESPACE_URI;
-
-        _document = (SVGDocument)dom.createDocument(_svgNS, "svg", null);
-    }
-
-    public Drawing(String filename) {
-        this();
-
-        FileType type=null;
-
-        // extension without the dot
-        String ext;
-
-        // where the last dot is. There may be more than one.
-        int dotPlace = filename.lastIndexOf ( '.' );
-
-        if ( dotPlace >= 0 )
-        {
-            // possibly empty
-            ext = filename.substring( dotPlace + 1 );
-
-            if(ext.equalsIgnoreCase("svg"))
-                type=FileType.SVG;
-            else if(ext.equalsIgnoreCase("wmf"))
-                type=FileType.WMF;
-        }
-
-        File inputFile=new File(filename);
-
-        switch(type) {
-            case WMF:
-                createFromWMF(inputFile);
-                break;
-            case SVG:
-                createFromSVG(inputFile);
-                break;
-            default:
-                break;
-        }
-
-        initialize(); // Parse SVG and initialize
-    }
-
-    public void createFromSVG(String svg) {
-
-        StringReader reader = new StringReader(svg);
-
-        String parser = XMLResourceDescriptor.getXMLParserClassName();
-        SAXSVGDocumentFactory f = new SAXSVGDocumentFactory(parser);
-
-        System.out.println("Create SVG Document");
-        try {
-            _document = f.createSVGDocument(_svgNS,reader);
-
-            /*
-               System.out.println("Created SVG Document=");
-               SVGTranscoder transcoder2 = new SVGTranscoder();
-               TranscoderInput svgInput = new TranscoderInput(_document);
-               TranscoderOutput out =
-               new TranscoderOutput(new OutputStreamWriter(System.out, "UTF-8"));
-               transcoder2.transcode(svgInput, out);*/
-
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        /*catch (TranscoderException e) {
-              // TODO Auto-generated catch block
-              e.printStackTrace();
-          }*/
-
-    }
-
-    public void createFromSVG(File file) {
-
-        FileReader reader;
-        try {
-            reader = new FileReader(file);
-
-            String parser = XMLResourceDescriptor.getXMLParserClassName();
-            SAXSVGDocumentFactory f = new SAXSVGDocumentFactory(parser);
-
-            System.out.println("Create SVG Document");
-
-            _document = f.createSVGDocument(_svgNS,reader);
-
-
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-    }
-
-    public void createFromWMF(File file) {
-
-        WMFTranscoder transcoder = new WMFTranscoder();
-        try {
-            TranscoderInput input = new TranscoderInput(file.toURI().toString());
-
-            StringWriter svgWriter=new StringWriter();
-            TranscoderOutput output = new TranscoderOutput(svgWriter);
-
-            transcoder.transcode(input,output);
-
-            svgWriter.flush();
-            String svgStr=svgWriter.toString();
-
-            createFromSVG(svgStr);
-
-        } catch (TranscoderException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-    }
-
-    private void createRects() {
-        NodeList list=_document.getElementsByTagName(SVG12Constants.SVG_RECT_TAG);
-
-
-        for(int i=0; i<list.getLength(); i++){
-            SVGOMRectElement rect=(SVGOMRectElement)list.item(i);
-        }
-    }
-
-    private void createLines() {
-        NodeList list=_document.getElementsByTagName(SVG12Constants.SVG_LINE_TAG);
-
-         for(int i=0; i<list.getLength(); i++){
-            SVGOMLineElement line=(SVGOMLineElement)list.item(i);
-            Primitive prim = new Primitive(line);
-            addPrimitive( prim );
-        }
-    }
-
-    private void createPolylines() {
-        NodeList list=_document.getElementsByTagName(SVG12Constants.SVG_POLYLINE_TAG);
-
-
-        for(int i=0; i<list.getLength(); i++){
-
-
-            SVGOMPolylineElement line=(SVGOMPolylineElement)list.item(i);
-            Primitive prim = new Primitive(line);
-            addPrimitive( prim );
-        }
-    }
-    private void createPaths() {
-        NodeList list=_document.getElementsByTagName(SVG12Constants.SVG_PATH_TAG);
-
-        for(int i=0; i<list.getLength(); i++){
-
-            SVGOMPathElement path=(SVGOMPathElement)list.item(i);
-
-            //SVGMatrix m=SVGLocatableSupport.getCTM(path);
-            //float a=m.getA();
-
-            //System.out.println("Creating Primitive from path...");
-            Primitive prim = new Primitive(path);
-            //System.out.println("SVG Path="+prim.getSVG());
-
-            //check if last point = first point, because then it is closed=polygon
-            int last = prim.getNumPoints() - 1;
-
-            if (last>0) {
-                // if last point is the first point, then setClosed(true)
-                if (((prim.getPoint(0).x)==(prim.getPoint(last).x)) &&
-                        ((prim.getPoint(0).y)==(prim.getPoint(last).y))) {
-                    prim.setClosed(true);
-                }
-            }
-
-
-            if (prim.getNumPoints()>1) {
-                // cout << "path added" << endl;
-                // cout << drawing->getPrimitives()->size() << endl;
-                addPrimitive( prim );
-                // cout << drawing->getPrimitives()->size() << endl;
-            } else {
-                //cout << "path empty" << endl;
-                //delete prim;
-            }
-        }
-    }
-    public void initialize() {
-
-        _log.info("Initializing Drawing...");
-
-        // boot the CSS engine to get Batik to compute the CSS
-        UserAgentAdapter userAgent = new UserAgentAdapter();
-        DocumentLoader loader    = new DocumentLoader(userAgent);
-        BridgeContext ctx       = new BridgeContext(userAgent, loader);
-        ctx.setDynamicState(BridgeContext.DYNAMIC);
-        GVTBuilder builder   = new GVTBuilder();
-        GraphicsNode rootGN    = builder.build(ctx, _document);
-
-        _log.info("Creating paths...");
-        createPaths();
-        _log.info("Creating lines...");
-        createLines();
-        _log.info("Creating polylines...");
-        createPolylines();
-        _log.info("Creating rects...");
-        //createRects();
-        _log.info("... drawing initialized!");
-
-    }
-
-
-    public String getSketch(){
-        String sketchSVG;
-
-        sketchSVG="<g>";
-
-        Double minX=Double.POSITIVE_INFINITY, minY=Double.POSITIVE_INFINITY;
-        Double maxX=Double.NEGATIVE_INFINITY, maxY=Double.NEGATIVE_INFINITY;
-        for(Primitive primitive:getAllPrimitives()) {
-            sketchSVG+=primitive.getSVG();
-            if(primitive.getXmin()<minX) minX=primitive.getXmin();
-            if(primitive.getYmin()<minY) minY=primitive.getYmin();
-            if(primitive.getXmax()>maxX) maxX=primitive.getXmax();
-            if(primitive.getYmax()>maxY) maxY=primitive.getYmax();
-        }
-        Double width=maxX-minX;
-        Double height=maxY-minY;
-
-        sketchSVG="<svg xmlns=\"http://www.w3.org/2000/svg\" width=\""+width.toString()+"\" height=\""+height.toString()+"\" viewBox=\""+minX.toString()+" "+minY.toString()+" "+width.toString()+" "+height.toString()+"\" >"+sketchSVG;
-        sketchSVG+="</g></svg>";
-
-        StringReader reader = new StringReader(sketchSVG);
-
-        String parser = XMLResourceDescriptor.getXMLParserClassName();
-        SAXSVGDocumentFactory f = new SAXSVGDocumentFactory(parser);
-
-        SVGDocument svgDocument;
-
-        try {
-            svgDocument = f.createSVGDocument(_svgNS,reader);
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
-        return sketchSVG;
-    }
-
-    public String getSVG() {
-        String result="";
-        StringWriter sw=new StringWriter();
-        SVGTranscoder transcoder2 = new SVGTranscoder();
-        TranscoderInput svgInput = new TranscoderInput(_document);
-        TranscoderOutput out;
-        try {
-            out = new TranscoderOutput(sw);
-            //new OutputStreamWriter(sw, "UTF-8")
-            transcoder2.transcode(svgInput, out);
-            result=sw.toString();
-        } catch (TranscoderException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        return result;
-    }
-
-    public SVGDocument getSVGDocument() {
-        return _document;
+        primitives = new ArrayList<Primitive>();
+        id = -1;
     }
 
     /**
-     * An image transcoder that stores the resulting image.
+     * Creates a new Drawing.
+     * @param id the drawing's identifier.
      */
-    protected class Rasterizer extends ImageTranscoder {
-
-        private BufferedImage _img;
-
-        public BufferedImage getImage(){
-            return _img;
-        }
-
-        public BufferedImage createImage(int w, int h) {
-            return new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-        }
-
-        public void writeImage(BufferedImage img, TranscoderOutput output)
-                throws TranscoderException {
-            _img = img;
-        }
+    public Drawing(long id) {
+        primitives = new ArrayList<Primitive>();
+        this.id = id;
     }
 
-    public BufferedImage getImage(int bitmap_resolution)
-    {
-        try {
-            TranscoderInput input = new TranscoderInput(_document);
-            Rasterizer r = new Rasterizer();
-            r.addTranscodingHint(ImageTranscoder.KEY_WIDTH, new Float(bitmap_resolution));
-            r.addTranscodingHint(ImageTranscoder.KEY_HEIGHT, new Float(bitmap_resolution));
-            r.addTranscodingHint(ImageTranscoder.KEY_BACKGROUND_COLOR, java.awt.Color.WHITE);
-            r.transcode(input,null);
-
-            return r.getImage();
-
-        } catch (Exception e) {
-
-            _log.log(Level.WARNING,"Error rasterizing!\n.",e);
-        }
-
-
-        return null;
-    }
-
-    public byte [] getPNG() {
-        PNGTranscoder transcoder=new PNGTranscoder();
-        TranscoderInput input = new TranscoderInput(_document);
-        ByteArrayOutputStream outstream=new ByteArrayOutputStream();
-        TranscoderOutput output = new TranscoderOutput(outstream);
-        transcoder.addTranscodingHint(PNGTranscoder.KEY_MAX_WIDTH, new Float(THUMB_WIDTH));
-        transcoder.addTranscodingHint(PNGTranscoder.KEY_MAX_HEIGHT, new Float(THUMB_HEIGHT));
-        try {
-            transcoder.transcode(input, output);
-
-        } catch (TranscoderException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
-        return outstream.toByteArray();
-    }
-    /** Destructor.
-     *
-
-     Drawing::~Drawing() {
-     removeAllPrimitives();
-     delete _list_primitives;
-     }*/
-
-    /** Gets all Primitives from the Drawing
-     *
-     * @return all primitives
+    /**
+     * Removes all primitives of the drawing.
      */
-    public List<Primitive> getAllPrimitives() {
-        return _list_primitives;
+    public void removeAllPrimitives() {
+        getAllPrimitives().clear();
+    }
+
+    /**
+     * Returns all primitives of the drawing.
+     * @return all primitives of the drawing.
+     */
+    public ArrayList<Primitive> getAllPrimitives() {
+        return primitives;
+    }
+
+    /**
+     * Replaces all primitives of the drawing.
+     * @param primitives the primitives to set.
+     */
+    public void setPrimitives(ArrayList<Primitive> primitives) {
+        this.primitives = primitives;
     }
 
     /**
@@ -448,16 +74,16 @@ public class Drawing implements IEntity<Long>{
 
         List<Primitive> orderedPrimitives = new ArrayList<Primitive>();
 
-        int size = _list_primitives.size();
+        int size = primitives.size();
 
         Primitive [] primitiveArray = new Primitive[size];
 
         // Copy pointers to a temporary array
         for(int i = 0; i < size; i++) {
-            primitiveArray[i] = _list_primitives.get(i);
+            primitiveArray[i] = primitives.get(i);
         }
 
-        while(orderedPrimitives.size() != _list_primitives.size()) {
+        while(orderedPrimitives.size() != primitives.size()) {
             double xPointer = Double.MAX_VALUE;//std::numeric_limits<double>::max();
             int indexPointer = Integer.MIN_VALUE;//std::numeric_limits<int>::min();
 
@@ -469,7 +95,7 @@ public class Drawing implements IEntity<Long>{
                     }
                 }
             }
-            orderedPrimitives.add(_list_primitives.get(indexPointer)); // TODO check if it equals push_back();
+            orderedPrimitives.add(primitives.get(indexPointer)); // TODO check if it equals push_back();
             primitiveArray[indexPointer] = null;
         }
         return orderedPrimitives;
@@ -485,16 +111,16 @@ public class Drawing implements IEntity<Long>{
         // std::vector<Primitive*>
         List<Primitive> orderedPrimitives = new ArrayList<Primitive>();
 
-        int size = _list_primitives.size();
+        int size = primitives.size();
 
         Primitive [] primitiveArray = new Primitive[size];
 
         // Copy pointers to a temporary array
         for(int i = 0; i < size; i++) {
-            primitiveArray[i] = _list_primitives.get(i);
+            primitiveArray[i] = primitives.get(i);
         }
 
-        while(orderedPrimitives.size() != _list_primitives.size()) {
+        while(orderedPrimitives.size() != primitives.size()) {
             double aPointer = Double.MAX_VALUE;
             int indexPointer = Integer.MIN_VALUE;
 
@@ -506,1135 +132,648 @@ public class Drawing implements IEntity<Long>{
                     }
                 }
             }
-            orderedPrimitives.add(_list_primitives.get(indexPointer));
+            orderedPrimitives.add(primitives.get(indexPointer));
             primitiveArray[indexPointer] = null;
         }
         return orderedPrimitives;
     }
 
-    /** Sets all Primitives of the Drawing (removes all existing primitives in current drawing)
-     *
-     * @param primitives	primitives to be set in this drawing
+    /**
+     * Returns the id of the drawing.
+     * @return the id of the drawing.
      */
-    public void setPrimitives(List <Primitive> primitives) {
-        removeAllPrimitives();
-        //delete _list_primitives;
-        _list_primitives = primitives;
-//		cout << "Exiting setPrimitives" << endl;
-    }
-
-    /** Remove all Primitives of the Drawing
-     *
-     */
-    public void removeAllPrimitives() {
-//		cout << "removing All Primitives" << endl;
-
-        _list_primitives = new ArrayList<Primitive>();
-
-//		cout << "All Primitives removed" << endl;
-    }
-
-
-    /** return number of Primitives in the Drawing
-     *
-     * @return	number of primitives in the drawing
-     */
-    public int primitivesCount() {
-        if (_list_primitives == null) {
-            return -1;
-        } else {
-            return _list_primitives.size();
-        }
-    }
-
-
-    /** adds a new Primitive to this drawing
-     *  the Primitive WILL BE REMOVED BY THIS DRAWING OBJECT, when this drawing gets destructed
-     *
-     * @return pointer to the newly created primitive
-     */
-    public Primitive createNewPrimitive() {
-
-        Primitive prim=new Primitive();
-        addPrimitive(prim);
-
-        return prim;
-    }
-
-
-    /** creates and returns pointer to a new Primitive and inserts it at a given location in the vector
-     *  the Primitive WILL BE REMOVED BY THIS DRAWING OBJECT, when this drawing gets destructed
-     *
-     * @param i	location in the vector to insert the new primitive
-     *
-     * @return returns null if location doesn't exist
-     */
-    public Primitive insertNewPrimitive(int i) {
-
-        Primitive prim=new Primitive();
-        boolean success = insertPrimitive(prim, i);
-
-        if (!success) {
-            prim = null;
-        }
-
-        return prim;
-    }
-
-
-    /** Adds a Primitive to the Drawing
-     *  Primitive WILL BE REMOVED BY THIS DRAWING OBJECT
-     *
-     * @param prim Primitive to be added to this drawing
-     */
-    public void addPrimitive(Primitive prim) {
-        if (_list_primitives == null) {
-            _list_primitives = new ArrayList<Primitive>();
-        }
-
-        prim.setId(_list_primitives.size()+1);
-        _list_primitives.add(prim); // TODO check it equals - push_back(prim);
-
-//	    std::cout << " adding primitive " << prim->getId() << std::endl;
-    }
-
-
-    /** insert a Primitive to the Drawing at place i
-     *  Primitive WILL BE REMOVED BY THIS DRAWING OBJECT
-     *
-     * @param prim Primitive to be added to this drawing
-     * @param i	location in the vector to insert the primitive
-     *
-     * @return returns false if location doesn't exist
-     */
-    public boolean insertPrimitive(Primitive prim, int i) {
-        if (_list_primitives == null) {
-            _list_primitives = new ArrayList<Primitive>();
-        }
-
-        if ((i < 0) || (i > _list_primitives.size())) {
-            return false;
-        }
-
-        prim.setId(_list_primitives.size()+1); //maybe resey the ID's of all the primitives
-//	    std::cout << "WARNING: is it bad that ID's aren't ascending?" <<std::endl;
-
-        /* TODO - Does this do the same thing?
-          ListIterator<Primitive> it=_list_primitives.listIterator();
-
-          int j=0;
-          for (j=0; j<i; j++) {
-              it.next();
-          }*/
-        _list_primitives.add(i ,prim);
-
-        return true;
-    }
-
-
-    /** Gets a Primitive from the Drawing
-     *
-     * @param idx	location of the primitive in the vector
-     *
-     * @return Pointer to the retrieved primitive, null if location i is invalid
-     */
-    public Primitive getPrimitive(int idx) {
-        if (_list_primitives == null)
-            return null;
-        else
-            return _list_primitives.get(idx);
-    }
-
-    /** Gets the total height of the Drawing
-     *
-     * @return height of the Drawing
-     */
-    public double getHeight() {
-        if (_list_primitives!=null && _list_primitives.size()>0) {
-            double ymin = _list_primitives.get(0).getYmin();
-            double ymax = _list_primitives.get(0).getYmax();
-            for (int i=1; i<_list_primitives.size(); i++) {
-                double min = _list_primitives.get(i).getYmin();
-                double max = _list_primitives.get(i).getYmax();
-                if (min<ymin) ymin=min;
-                if (max>ymax) ymax=max;
-            }
-            return Math.abs(ymax-ymin);
-        } else return 0;
-    }
-
-
-    /** Gets the total width of the Drawing
-     *
-     * @return width of the Drawing
-     */
-    public double getWidth() {
-        if (_list_primitives!=null && _list_primitives.size()>0) {
-            double xmin = _list_primitives.get(0).getXmin();
-            double xmax = _list_primitives.get(0).getXmax();
-            for (int i=1; i<_list_primitives.size(); i++) {
-                double min = _list_primitives.get(i).getXmin();
-                double max = _list_primitives.get(i).getXmax();
-                if (min<xmin) xmin=min;
-                if (max>xmax) xmax=max;
-            }
-            return Math.abs(xmax-xmin);
-        } else return 0;
-    }
-
-
-    /** Gets the length of the main diagonal of the Drawing
-     *
-     * @return length of the diagonal of this Drawing
-     */
-    public double getDiagonalLength() {
-        return Functions.dist(getWidth(),getHeight());
-    }
-
-
-    /** Gets the total area of the Drawing
-     *
-     * @return area of the Drawing
-     */
-    public double getAreaSize() {
-        return getWidth()*getHeight();
-    }
-
-
-    /** Retturns a string representation of this Drawing
-     *
-     * @return String representation of this Drawing
-     */
-    public String toString() {
-        StringBuffer ss=new StringBuffer();
-
-        ss.append("Drawing with id: " + _id );
-        for (int i = 0; i < _list_primitives.size(); i++) {
-            Primitive p = _list_primitives.get(i);
-            assert(p!=null);
-            String s = p.toString();
-            ss.append(s);
-        }
-        return ss.toString();
+    @Override
+    public Long getId() {
+        return id;
     }
 
     /**
-     * Simplifies the Drawing.
-     * Calls simplification methods for each Primitive in the drawing.
-     *
+     * Sets the id of the drawing.
+     * @param id the id to set.
      */
-    public void simplify()
-    {
-        System.out.println("Drawing: Simplify : reduceVertexCount");
-        reduceVertexCount(TOL);
-
-        System.out.println("Drawing: Simplify : removeSurroundingPrimitives");
-        removeSurroundingPrimitives();
-
-        // Indagare
-        System.out.println("Drawing: Simplify :  gradientElimination");
-        gradientElimination();
-
-        System.out.println("Drawing: Simplify :  colorConcatPrimitives");
-        colorConcatPrimitives();
-
-        System.out.println("Drawing: Simplify : removeSmallPrimitives");
-        removeSmallPrimitives();
-
+    @Override
+    public void setId(Long id) {
+        this.id = id;
     }
 
+    /**
+     * Returns the width of the drawing.
+     * @return the width of the drawing.
+     */
+    public double getWidth() {
+        if (getNumPrimitives() > 0) {
+            double xmin = primitives.get(0).getXmin(), min;
+            double xmax = primitives.get(0).getXmax(), max;
+            for (int i=1; i<primitives.size(); i++) {
+                    min = primitives.get(i).getXmin();
+                    max = primitives.get(i).getXmax();
+                    if (min<xmin) xmin=min;
+                    if (max>xmax) xmax=max;
+            }
+            return Math.abs(xmax-xmin);
+        }
+        else
+            return 0;
+    }
 
+    /**
+     * Returns the height of the drawing.
+     * @return the height of the drawing.
+     */
+    public double getHeight() {
+        if (getNumPrimitives() > 0) {
+            double ymin = primitives.get(0).getYmin(), min;
+            double ymax = primitives.get(0).getYmax(), max;
+            for (int i=1; i<primitives.size(); i++) {
+                    min = primitives.get(i).getYmin();
+                    max = primitives.get(i).getYmax();
+                    if (min<ymin) ymin=min;
+                    if (max>ymax) ymax=max;
+            }
+            return Math.abs(ymax-ymin);
+        }
+        else
+            return 0;
+    }
 
+    /**
+     * Returns the minimum value of the x coordinate for this drawing.
+     * @return the minimum value of the x coordinate for this drawing.
+     */
+    public double getXmin() {
+        if (getNumPrimitives() > 0) {
+            double xmin = primitives.get(0).getXmin(), min;
+            for (int i=1; i<primitives.size(); i++) {
+                    min = primitives.get(i).getXmin();
+                    if (min<xmin) xmin=min;
+            }
+            return xmin;
+        }
+        else
+            return 0;
+    }
 
+    /**
+     * Returns the maximum value of the x coordinate for this drawing.
+     * @return the maximum value of the x coordinate for this drawing.
+     */
+    public double getXmax() {
+        if (getNumPrimitives() > 0) {
+            double xmax = primitives.get(0).getXmax(), max;
+            for (int i=1; i<primitives.size(); i++) {
+                    max = primitives.get(i).getXmax();
+                    if (max>xmax) xmax=max;
+            }
+            return xmax;
+        }
+        else
+            return 0;
+    }
 
-    // -------------------- simplification heuristics ------------------------------
+    /**
+     * Returns the minimum value of the y coordinate for this drawing.
+     * @return the minimum value of the y coordinate for this drawing.
+     */
+    public double getYmin() {
+        if (getNumPrimitives() > 0) {
+            double ymin = primitives.get(0).getYmin(), min;
+            for (int i=1; i<primitives.size(); i++) {
+                    min = primitives.get(i).getYmin();
+                    if (min<ymin) ymin=min;
+            }
+            return ymin;
+        }
+        else
+            return 0;
+    }
 
-    /** Indagare
-     * Gradient elimination
-     *
-     * */
+    /**
+     * Returns the maximum value of the y coordinate for this drawing.
+     * @return the maximum value of the y coordinate for this drawing.
+     */
+    public double getYmax() {
+        if (getNumPrimitives() > 0) {
+            double ymax = primitives.get(0).getYmax(), max;
+            for (int i=1; i<primitives.size(); i++) {
+                    max = primitives.get(i).getYmax();
+                    if (max>ymax) ymax=max;
+            }
+            return ymax;
+        }
+        else
+            return 0;
+    }
 
-    void gradientElimination(){
+    /**
+     * Returns the diagonal length of the drawing.
+     * @return the diagonal length of the drawing.
+     */
+    public double getDiagonalLength() {
+        return Math.sqrt((getWidth()*getWidth()) + (getHeight()*getHeight()));
+    }
 
-        double	dist_xmin, dist_xmax, dist_ymin, dist_ymax, // distance between the boundaries of two polygons
-                dist_h, dist_s, dist_v;		// distancia between the HSV color components of two polygons
+    /**
+     * Returns the area of the drawing.
+     * @return the area of the drawing.
+     */
+    public double getArea() {
+        return getWidth()*getHeight();
+    }
 
-        double xmin_i, xmax_i, ymin_i, ymax_i, color_h_i, color_s_i, color_v_i, color_h_j, color_s_j, color_v_j;
+    /**
+     * Adds a primitive to the drawing.
+     * @param primitive the primitive to be added.
+     */
+    public void addPrimitive(Primitive primitive) {
+        primitive.setId(new Long(primitives.size()+1));
+        primitives.add(primitive);
+    }
 
-        List<Primitive> lst_primitives_area = getAllPrimitivesSortedByArea();
+    /**
+     * Adds a new primitive to this drawing.
+     * @return the newly created primitive.
+     */
+    public Primitive createNewPrimitive() {
+        Primitive primitive = new Primitive();
+        addPrimitive(primitive);
+        return primitive;
+    }
 
-        List<Primitive> new_list_primitives = new ArrayList<Primitive>();
+    /**
+     * Inserts a primitive to the drawing at the specified location.
+     * @param primitive the primitive to be added.
+     * @param index the position in the primitive list to which the primitive
+     * will be added.
+     * @return false if the location doesn't exist.
+     */
+    public boolean insertPrimitive(Primitive primitive, int index) {
+        if ((index < 0) || (index > primitives.size()))
+            return false;
 
-        int size = this.primitivesCount();
-        double area_max;
-        double max_dist = this.getWidth() * 0.05;
+        primitive.setId(new Long(primitives.size()+1));
+        primitives.add(index, primitive);
+        return true;
+    }
 
-        for(int i=0; i < size - 1; i++){
+    /**
+     * Inserts a new primitive at the specified location.
+     * @param index the position in the primitive list to which the new
+     * primitive will be added.
+     * @return the new primitive or null if the position doesn't exist.
+     */
+    public Primitive insertNewPrimitive(int index) {
+        Primitive primitive = new Primitive();
+        if (insertPrimitive(primitive, index))
+            return primitive;
+        else
+            return null;
+    }
 
-            Primitive p = lst_primitives_area.get(i);
-            //assert(p);
+    /**
+     * Returns the primitive located at the supplied position.
+     * @param index the index of the primitive to return.
+     * @return the primitive at the specified position.
+     */
+    public Primitive getPrimitive(int index) {
+        return primitives.get(index);
+    }
 
-            if(p.getBorderColor().isSet() || p.getFillColor().isSet()){
+    /**
+     * Returns a list with all primitives of the drawing, sorted according
+     * to the x axis.
+     * @return all primitives in the drawing, sorted in the x axis.
+     */
+    public ArrayList<Primitive> getPrimitivesSortedX() {
+        ArrayList<Primitive> sortedPrimitives = new ArrayList<Primitive>(primitives);
+        Collections.sort(sortedPrimitives, new Comparator<Primitive>() {
+            public int compare(Primitive a, Primitive b) {
+                return Double.compare(a.getXmin(), b.getXmin());
+            }
+        });
+        return sortedPrimitives;
+    }
 
-                xmin_i = p.getXmin();
-                xmax_i = p.getXmax();
-                ymin_i = p.getYmin();
-                ymax_i = p.getYmax();
-                color_h_i = p.getFillColor().hue;
-                color_s_i = p.getFillColor().saturation;
-                color_v_i = p.getFillColor().value;
+    /**
+     * Returns a list with all primitives of the drawing, sorted by the following
+     * criteria...
+     * @return all primitives in the drawing, sorted.
+     */
+    public ArrayList<Primitive> getPrimitivesSorted() {
+        // TODO Sandy: (4) A ideia é isto devolver uma lista de primitivas ordenada.
+        // Deverá ser muito parecido ao metodo de cima.
+        // Temos de discutir os 2.
+        return new ArrayList<Primitive>();
+    }
 
-                int j = i+1;
+    /**
+     * Returns the number of primitives in the drawing.
+     * @return the number of primitives in the drawing.
+     */
+    public int getNumPrimitives() {
+        return primitives.size();
+    }
 
-                while(j < size){
-                    Primitive p_j = lst_primitives_area.get(j);
+    /**
+     * Simplifies the drawing.
+     * by simplifying each primitive
+     * then invokes other simplifying functions referring to the whole drawing
+     */
+    public void simplify(Simplification simplification) {
+        // TODO Sandy: (3) Mais simplificação. Ver: drawing.h, drawing.cpp
+        double tolerance = simplification.getTolerance();
+        double lineTolerance = simplification.getLineTolerance();
+        double areaTolerance = simplification.getAreaTolerance();
+        double preTolerance = simplification.getPreTolerance();
+        double overTolerance = simplification.getOverTolerance();
+        int maxCountOptimize = simplification.getMaxCountOptimize();
+        int maxVertices = simplification.getMaxVertices();
+        double surroundTolDist = simplification.getSurroundTolDist();
+        double surroundTolPoints = simplification.getSurroundTolPoints();
+        double hueTolerance = simplification.getHueTolerance();
+        double saturationTolerance = simplification.getSaturationTolerance();
+        double intensityTolerance = simplification.getIntensityToleration();
 
-                    area_max = 0.6*p_j.getAreaSize();
+//        int indexFirst = 0;
+//        int indexLast;
+//        ArrayList<Point> matchArray = new ArrayList<Point>();
 
+        //ArrayList<Primitive> primitives = drawing.getAllPrimitives();
+//        for (int i = 0; i<this.getNumPrimitives(); i++) {
+//            Primitive primitive = this.getPrimitive(i);
+//            indexLast = primitive.getNumPoints() - 1;
+//            primitive.simplify(tolerance, primitive.getPoints(), 0, indexLast, matchArray);
+//        }
 
-                    if((p_j.getAreaSize() - p.getAreaSize()) >= area_max)
-                        break;
+        for (int i = 0; i < Simplification.SIMPLIFICATION_COUNT; i++) {
+            switch (simplification.getOrder()[i]) {
+//                case Simplification.REMOVE_SURROUNDING_PRIMITIVES:
+//                    removeSurroundingPrimitives(surroundTolDist, surroundTolPoints);
+//                    break;
+                case Simplification.COLOR_CONCAT_PRIMITIVES:
+                    colorConcatPrimitives(preTolerance, overTolerance, maxCountOptimize, maxVertices, hueTolerance, saturationTolerance, intensityTolerance);
+                    break;
+                case Simplification.REMOVE_SMALL_PRIMITIVES:
+                    removeSmallPrimitives(areaTolerance);
+                    break;
+                case Simplification.REDUCE_VERTEX_COUNT:
+                    reduceVertexCount(tolerance, lineTolerance);
+                    break;
+                case Simplification.NONE:
+                    break;
+            }
+        }
+//        if (simplification.isRemoveSurroundingPrimitives())
+//            removeSurroundingPrimitives(surroundTolDist, surroundTolPoints);
+//        if (simplification.isColorConcatPrimitives())
+//            colorConcatPrimitives(preTolerance, overTolerance, maxCountOptimize, maxVertices, hueTolerance, saturationTolerance, intensityTolerance);
+//        if (simplification.isRemoveSmallPrimitives())
+//            removeSmallPrimitives(areaTolerance);
+//        if (simplification.isReduceVertexCount())
+//            reduceVertexCount(tolerance, lineTolerance);
+    }
 
-                    if(p_j.getBorderColor().isSet || p_j.getFillColor().isSet){
-                        dist_xmin = Math.abs(xmin_i - p_j.getXmin());
-                        dist_xmax = Math.abs(p_j.getXmax() - xmax_i);
-                        dist_ymin = Math.abs(ymin_i - p_j.getYmin());
-                        dist_ymax = Math.abs(p_j.getYmax() - ymax_i);
+    /**
+     * Removes Surrounding Primitives of a given drawing
+     */
+    private void removeSurroundingPrimitives(double surroundTolDist, double surroundTolPoints) {
+        ArrayList<Primitive> newListPrimitives = new ArrayList<Primitive>();
 
-                        color_h_j = p_j.getFillColor().hue;
-                        color_s_j = p_j.getFillColor().saturation;
-                        color_v_j = p_j.getFillColor().value;
+        if(this.getNumPrimitives() > 0) {
+            //double preTolerance = preTol * this.getDiagonalLength();
+            double maxDist = surroundTolDist * this.getDiagonalLength();
+            double maxDist2Allowed = Math.pow(maxDist, 2);
 
+            ArrayList<Primitive> excludePrimitives = new ArrayList<Primitive>();
 
-                        dist_h = Math.abs(color_h_i - color_h_j);
-                        dist_s = Math.abs(color_s_i - color_s_j);
-                        dist_v = Math.abs(color_v_i - color_v_j);
+            for (int i=0; i<this.getNumPrimitives(); i++) {
+                Primitive prim = this.getPrimitive(i);
+                int pointsNeeded = (int) (surroundTolPoints * this.getPrimitive(i).getNumPoints());
+                //System.out.println("i =" + i);
+                for (int j=i+1; j< this.getNumPrimitives() && j>=0; j--) {
+                    //System.out.println("j =" + j);
+                    if ((j!=i) && excludePrimitives.contains(this.getPrimitive(j))) {
+                        int pointsNeededJ = (int)(surroundTolPoints * this.getPrimitive(j).getNumPoints());
+                        int pointsInRange = 0;
 
-                        // Verify if the polygons have close boundaries and colors
-                        if(	(dist_xmin >= 0) && (dist_xmin < max_dist) &&
-                                (dist_xmax >= 0) && (dist_xmax < max_dist) &&
-                                (dist_ymin >= 0) && (dist_ymin < max_dist) &&
-                                (dist_ymax >= 0) && (dist_ymax < max_dist) &&
-                                (dist_h >= 0) && (dist_h < HUE_DIF) &&
-                                (dist_s >= 0) && (dist_s < SATURATION_DIF) &&
-                                (dist_v >= 0) && (dist_v < VALUE_DIF)){
+                        //loops through all points of i and j and removes add removes polygon i when
+                        //all points of polygon j are less far from any point of i then max_dist, i!=j
+                        for(int k=0; k<prim.getNumPoints(); k++) {
+                            Point pointI = prim.getPoint(k);
 
-                            p.setBorderColor(new Color(0,0,0,1,false));
-                            p.setFillColor(new Color(0,0,0,1,false));
-                            break;
+                            for(int l=0; l<this.getPrimitive(j).getNumPoints(); l++){
+                                Point pointJ = prim.getPoint(l);
+                                double dx = pointI.getX() - pointJ.getX();
+                                double dy = pointI.getY() - pointJ.getY();
+                                double curDist2 = dx + dy;
 
+                                if (curDist2 <= maxDist2Allowed) {
+                                    pointsInRange++;
+                                    break;
+                                }
+                                if (pointsInRange >= pointsNeeded) {
+                                    break;
+                                }
+                            } //end l
+
+                            //if there are enough points in range the primitive gets excluded
+                            if (pointsInRange >= pointsNeeded) break;
+                            else if (pointsInRange >= pointsNeededJ) {
+                                // only possible for lines, because we want the upper polygon,
+                                //not the outer, because that is probably shadow  (after gradient
+                                //color polygon combining)
+                                if (!(this.getPrimitive(j).isClosed())) {
+                                    //combine bordercolors if needed
+                                    if(!this.getPrimitive(i).getBorderColor().isSet()) {
+                                        this.getPrimitive(i).setBorderColor(new Color(this.getPrimitive(j).getBorderColor(),
+                                                this.getPrimitive(j).getBorderColor().isSet()));
+                                    }
+                                    excludePrimitives.add(this.getPrimitive(j));
+                                }
+                            }
                         }
-
+                        if (pointsInRange >= pointsNeeded) {
+                            //combine colors if needed
+                            if (!this.getPrimitive(j).getBorderColor().isSet()) {
+                                this.getPrimitive(j).setBorderColor(new Color(this.getPrimitive(i).getBorderColor(),
+                                                this.getPrimitive(i).getBorderColor().isSet()));
+                            }
+                            if (this.getPrimitive(j).isClosed() && !this.getPrimitive(j).getFillColor().isSet()) {
+                                this.getPrimitive(j).setFillColor(new Color(this.getPrimitive(i).getFillColor(),
+                                                this.getPrimitive(i).getFillColor().isSet()));
+                            }
+                            //if the one you keep isn't a polygon(but a polyline), BUT the one you exclude is
+                            else if (this.getPrimitive(i).isClosed() && !this.getPrimitive(i).getFillColor().isSet()) {
+                                //then exclude the outer polyline, and keep the inner polygon
+                                if (!this.getPrimitive(i).getBorderColor().isSet()) {
+                                    this.getPrimitive(i).setBorderColor(new Color(this.getPrimitive(j).getBorderColor(),
+                                                this.getPrimitive(j).getBorderColor().isSet()));
+                                }
+                                excludePrimitives.add(this.getPrimitive(j));
+                                break;
+                            }
+                            excludePrimitives.add(this.getPrimitive(i));
+                            break;
+                        }
                     }
-                    j++;
+                } //end j cycle
+            } //end i cycle
 
+            for (int m = 0; m < this.getNumPrimitives(); m++) {
+                Primitive prim = this.getPrimitive(m);
+                if (!(excludePrimitives.contains(prim))) {
+                    prim.setId(new Long(this.getNumPrimitives()+1));
+                    newListPrimitives.add(prim);
                 }
-
             }
+            this.setPrimitives(newListPrimitives);
         }
-
-        int ii;
-
-        for(ii=0; ii < size; ii++){
-            Primitive p_i = this.getPrimitive(ii);
-
-            if(p_i.getFillColor().isSet() || p_i.getBorderColor().isSet()){
-                new_list_primitives.add(p_i);
-            }
-            else
-                p_i=null;
-
-        }
-
-        _list_primitives.clear();
-        _list_primitives = new_list_primitives;
     }
 
 
-    /** Concatenate primitives with similar fill-color, and cuts-out primitives with different colors or borders
-     * reducing primitive count by placing primitives in an exclude list, when its vertices are added to another primitive
-     *
+    /** Concatenates primitives with similar fill-color, and cuts-out primitives
+     * with different colors or borders reducing primitive count by placing
+     * primitives in an exclude list, when its vertices are added to another
+     * primitive
      */
-    public void colorConcatPrimitives(){
+    private void colorConcatPrimitives(double preTol, double overTol,
+        int maxCountOptimize, int maxVertices,
+        double hueTol, double satTol, double intTol) {
+        ArrayList<Primitive> newListPrimitives = new ArrayList<Primitive>();
+        float[] hsv1 = new float[3];
+        float[] hsv2 = new float[3];
 
-        List <Primitive> new_list_primitives = new ArrayList<Primitive>();
-
-        if (_list_primitives != null) {
-
-            int nrToBeRemoved = 0;
-            double pre_tol = PRE_TOL * this.getDiagonalLength();
-
-            Primitive p_i = null;
-            Primitive p_j = null;
-
-            int p_i_points;
-            int p_j_points;
-
-            Color p_i_bcolor = null;
-            Color p_i_fcolor = null;
-            Color p_j_bcolor = null;
-            Color p_j_fcolor = null;
-
-            int i = 0;
-            int j = 0;
+        if (this.getNumPrimitives() != 0) {
+            //initialization
+            int numberToBeRemoved = 0;
+            double preTolerance = preTol * this.getDiagonalLength();
+            Primitive prim1 = new Primitive();
+            Primitive prim2 = new Primitive();
 
             int countOptimize = 0;
 
+            //search for a primitive which overlaps an already drawn primitive
+            for (int i=0; i< this.getNumPrimitives(); i++){
+                prim1 = this.getPrimitive(i);
 
-            //search for a primitive which overlaps a already drawn primitive
-            for (i = 1; i < this.primitivesCount(); i++) {
-
-                p_i = this.getPrimitive(i);
-                p_i_points = p_i.getNumPoints();
-
-                if (p_i_points == 0) {
-                    p_i.setBorderColor(new Color(0,0,0,1,false));
-                    p_i.setFillColor(new Color(0,0,0,1,false));
+                if(prim1.getNumPoints() == 0) {
+                    prim1.setBorderColor(new Color(0, 0, 0, 0, false));
+                    prim1.setFillColor(new Color(0, 0, 0, 0, false));
                 }
 
-                p_i_bcolor = p_i.getBorderColor();
-                p_i_fcolor = p_i.getFillColor();
-
-                //this is possible when there are objects inserted after an clipping operation
-                if (p_i_bcolor.isSet ||  p_i_fcolor.isSet) {
+                //this is possible when there are objects inserted after a clipping operation
+                if (prim1.getBorderColor().isSet() || prim1.getFillColor().isSet()) {
                     //get already drawn primitives (backwards)
-                    for (j = i-1; j >=0 ; j--) {
+                    for (int j=i-1; j>=0; j--) {
+                        prim2 = this.getPrimitive(j);
 
-                        p_j=this.getPrimitive(j);
-                        p_j_points = p_j.getNumPoints();
-
-                        if (p_j_points == 0) {
-                            p_j.setBorderColor(new Color(0,0,0,1,false));
-                            p_j.setFillColor(new Color(0,0,0,1,false));
+                        if (prim2.getNumPoints() == 0) {
+                            prim2.setBorderColor(new Color(0,0,0,0, false));
+                            prim2.setFillColor(new Color(0,0,0,0, false));
                         }
 
-                        p_j_bcolor = p_j.getBorderColor();
-                        p_j_fcolor = p_j.getFillColor();
-
                         //skip test with primitives, which are already excluded
-                        if ((p_i_bcolor.isSet ||  p_i_fcolor.isSet) &&
-                                (p_j_bcolor.isSet ||  p_j_fcolor.isSet)) {
+                        if ((prim1.getBorderColor().isSet() || prim1.getFillColor().isSet()) &&
+                                (prim2.getBorderColor().isSet() || prim2.getFillColor().isSet())) {
 
-                            //boundingbox test (if the boundin boxes don't collide, then we don't even have to look at the vertices)
-//	                        std::cout << "searching for colliding bounding boxes..." << std::endl;
-                            if (p_i.boundingBoxesCollide(p_j)) {
-//	                            std::cout << "boundingboxes collide" << std::endl;
-
-
+                            //boundingbox test (if the bounding boxes don't collide, then we don't
+                            //have to look at the vertices)
+                            if (prim1!=prim2 && prim1.collide(prim2)) {
                                 //first case: two polygons // lines do still nothing
-                                if ( (p_i.isClosed()) && (p_j.isClosed()) ) {
-
+                                if (prim1.isClosed() && prim2.isClosed()) {
                                     //color tests to eventually combine and exclude j (inner primitive)
-                                    if ((p_i_fcolor.isSet) && (p_j_fcolor.isSet)) {
-
-                                        //bordercolor test
-                                        //combine methode
+                                    if (prim1.getFillColor().isSet() && prim2.getFillColor().isSet()) {
                                         //if bordercolor = fillcolor then remove bordercolor
-                                        Color cb = null;
-                                        Color cf = null;
-                                        cb = p_i_bcolor;
-                                        cf = p_i_fcolor;
-                                        if ( (cb.isSet) && (cf.isSet) && (cb.red ==cf.red) && (cb.green ==cf.green) && (cb.blue ==cf.blue) ) cb.isSet = false;
+                                        if ((prim1.getFillColor().equals(prim1.getBorderColor()) &&
+                                                (prim1.getFillColor().isSet() && prim1.getBorderColor().isSet())) ||
+                                                prim1.getBorderColor().getAlpha() == 0) {
+                                            prim1.setBorderColor(new Color(prim1.getBorderColor(), false));
+                                        }
+                                        if ((prim2.getFillColor().equals(prim2.getBorderColor()) &&
+                                                prim2.getFillColor().isSet() && prim2.getBorderColor().isSet()) ||
+                                                prim2.getBorderColor().getAlpha() == 0) {
+                                            prim2.setBorderColor(new Color(prim2.getBorderColor(), false));
+                                        }
 
-                                        cb = p_j_bcolor;
-                                        cf = p_j_fcolor;
-                                        if ( (cb.isSet) && (cf.isSet) && (cb.red ==cf.red) && (cb.green ==cf.green) && (cb.blue ==cf.blue) ) cb.isSet = false;
-
+                                        //System.out.println("Prim1: " + i + " Prim2: " + j + " (out of " + this.getNumPrimitives() + ")");
 
                                         //SPEED Pre-optimalisation
-                                        if ( countOptimize > MAX_COUNT_OPTIMIZE ) {
-                                            if (p_i_points > MAX_VERTICES) {
-                                                p_i.polySimplify(pre_tol);
-                                                if ((p_i_points > MAX_VERTICES) && (OVER_TOL > 1)) {
-                                                    p_i.polySimplify(pre_tol * OVER_TOL);
+                                        if (countOptimize > maxCountOptimize) {
+                                            if (prim1.getNumPoints() > maxVertices) {
+                                                prim1.polySimplify(preTolerance);
+                                                if (prim1.getNumPoints() > maxVertices && overTol > 1) {
+                                                    prim1.polySimplify(preTolerance * overTol);
                                                 }
-                                                countOptimize=0;
+                                                countOptimize = 0;
                                             }
 
-                                            if (p_j_points > MAX_VERTICES) {
-                                                p_j.polySimplify(pre_tol);
-                                                if ((p_j_points > MAX_VERTICES) && (OVER_TOL > 1)) {
-                                                    p_j.polySimplify(pre_tol * OVER_TOL);
+                                            if (prim2.getNumPoints() > maxVertices) {
+                                                prim2.polySimplify(preTolerance);
+                                                if (prim2.getNumPoints() > maxVertices && overTol > 1) {
+                                                    prim2.polySimplify(preTolerance * overTol);
                                                 }
-                                                countOptimize=0;
+                                                countOptimize = 0;
                                             }
-//	                                        std::cout << "pre-opt done" << std::endl;
                                         }
                                         countOptimize++;
 
-
-
+                                        // convert rgb to hsv colors
+                                        java.awt.Color.RGBtoHSB(prim1.getFillColor().getRed(),
+                                                prim1.getFillColor().getGreen(),
+                                                prim1.getFillColor().getBlue(),
+                                                hsv1);
+                                        java.awt.Color.RGBtoHSB(prim2.getFillColor().getRed(),
+                                                prim2.getFillColor().getGreen(),
+                                                prim2.getFillColor().getBlue(),
+                                                hsv2);
                                         //test if color is within range AND there is no border
-                                        if (
-                                                (
-                                                        ((Math.abs(p_i_fcolor.hue - p_j_fcolor.hue) < HUE_TOL)  || (2*Math.PI - Math.abs(p_i_fcolor.hue - p_j_fcolor.hue) < HUE_TOL))&&
-                                                                (Math.abs(p_i_fcolor.saturation - p_j_fcolor.saturation) < SATURATION_TOL) &&
-                                                                (Math.abs(p_i_fcolor.value - p_j_fcolor.value) < INTENSITY_TOL)
-                                                ) && (
-                                                        (!p_i_bcolor.isSet) && (!p_j_bcolor.isSet)
-                                                )
+                                        if (!prim1.getBorderColor().isSet() && !prim2.getBorderColor().isSet() &&
+                                                Math.abs(hsv1[0] - hsv2[0])*360 < hueTol &&
+                                                Math.abs(hsv1[1] - hsv2[1]) < satTol &&
+                                                Math.abs(hsv1[2] - hsv2[2]) < intTol) {
 
-                                                ) {
-                                            //merge p_j with p_i
-                                            int insertedPrimitives = merge(i,j);
-
-//	                                        std::cout << " i=" << i << "/" << this.primitivesCount() << " j=" << j << std::endl;
-
-
+                                            int insertedPrimitives = mergePrimitives(prim1, prim2);
                                             if (insertedPrimitives > 0) {
+                                               numberToBeRemoved += 2;
 
-                                                nrToBeRemoved += 2;
+                                               //set original primitives transparent, to excluded them
+                                               prim1.setBorderColor(new Color(prim1.getBorderColor(),false));
+                                               prim1.setFillColor(new Color(prim1.getFillColor(), false));
+                                               prim2.setBorderColor(new Color(prim2.getBorderColor(),false));
+                                               prim2.setFillColor(new Color(prim2.getFillColor(),false));
 
-//	                                            std::cout << "ik heb ge-unioned; " << insertedPrimitives << " polygonen toegevoegd, new_count:" << (this.primitivesCount() - nrToBeRemoved) << std::endl;
-                                                //set original i and j transparent, so it gets excluded
-                                                p_i.setBorderColor(new Color(255,255,255,255,false));
-                                                p_i.setFillColor(new Color(255,255,255,255,false));
-                                                p_j.setBorderColor(new Color(255,255,255,255,false));
-                                                p_j.setFillColor(new Color(255,255,255,255,false));
-
-                                                //update p_i to union of i and j
-                                                p_i = this.getPrimitive(i);
-                                                p_i_points = p_i.getNumPoints();
-                                                p_i_bcolor = p_i.getBorderColor();
-                                                p_i_fcolor = p_i.getFillColor();
+                                               //update p_i to union of i and j
+                                               prim1 = this.getPrimitive(i);
                                             }
-                                        } else { //color not in range or border seperates them
-                                            //cut p_i out of p_j
-                                            int insertedPrimitives = diff(i,j);
 
-                                            nrToBeRemoved += 1;
-
-//	                                      std::cout << "ik heb geclipped; " << insertedPrimitives << " polygonen toegevoegd, new_count:" << (this.primitivesCount() - nrToBeRemoved) << std::endl;
-                                            //set original j transparent, so it gets excluded
-                                            p_j.setBorderColor(new Color(255,255,255,255,false));
-                                            p_j.setFillColor(new Color(255,255,255,255,false));
-
-
-                                            //the upper primitive has moved to i + insertedPrimitives
-                                            i += insertedPrimitives;
-
-                                            //p_i.setBorderColor(new Color(255,255,0,true));
-                                            //p_i.setFillColor(new Color(255,0,255,false));
-
-
-                                        } // end color.range test
-
-
-//	                                    std::cout << " i=" << i << "/" << this.primitivesCount() << " j=" << j << std::endl;
-
-                                    } //end color.is_set test
-                                } //end polygon/line test
-                            }//end boundingBoxesCollide test
-                        } // end exclude contains j test
-                    } //end j loop
-                } // end exclude contains i test
-            } //end i loop
-
-            //creating new drawing, without primitives which are in the exclude-list
-            int ii;
-            for(ii=0;ii<this.primitivesCount();ii++) {
-                Primitive p = this.getPrimitive(ii);
-
-                if (p.getBorderColor().isSet || p.getFillColor().isSet) {
-                    new_list_primitives.add(p);//push_back(p);
-                } else {
-                    //delete p;
-                }
-            }
-            //delete _list_primitives;
-        }
-
-        _list_primitives=new_list_primitives;
-    }
-
-
-
-    /** removes relatively small primitives from the drawing
-     *
-     */
-    public void removeSmallPrimitives()
-    {
-
-        List <Primitive> new_list_primitives = new ArrayList<Primitive>();
-
-        if (_list_primitives != null) {
-
-            int size = this.primitivesCount();
-
-            //based on percentage of the total area
-            double threshold_size = AREA_TOL * getAreaSize();
-
-            //optimize the drawing by removing small primitives
-            for (int i = 0; i < size; i++) {
-                Primitive p = _list_primitives.get(i);
-                assert(p!=null);
-
-//	            std::cout << "simpl" << p.getId << "/" << size << std::endl;
-
-                // check if the primitive isn't invisible
-                if ((p.getFillColor().isSet) || (p.getBorderColor().isSet)) {
-                    //add to new list, when there isn't an areaSize or when the areaSize is above the threshold
-                    Double area=p.getAreaSize();
-                    if ((area==-1) || (area > threshold_size)) {
-                        p.setId(new_list_primitives.size()+1);
-                        new_list_primitives.add(p); //push_back(p);
-                    } else {
-                        //delete p;
-                    }
-                }
-            }
-            //delete _list_primitives;
-        }
-
-        _list_primitives = new_list_primitives;
-    }
-
-
-    /** Remove vertices from all primitives, which distance between each other are to small
-     * if 2 edges where left and there distance between each other is to small too,
-     * then the complete primitive is removed from the drawing
-     *
-     */
-    public void reduceVertexCount(double tol) {
-
-        List<Primitive> new_list_primitives = new ArrayList<Primitive>();
-
-
-        if (_list_primitives != null) {
-
-            double rel_tol = tol * this.getDiagonalLength();
-            double rel_min_length = LINE_TOL * getDiagonalLength();
-            Primitive p = null;
-
-            //optimize all primitives by removing some small primitives and small lines withing primitives
-            int size = this.primitivesCount();
-            int i;
-            for (i=0; i < size; i++) {
-                p = this.getPrimitive(i);
-                assert(p!=null);
-
-
-//	            std::cout << "simpl" << p.getId << "/" << size << std::endl;
-
-                p.polySimplify(rel_tol);
-
-                //add to new list, when there are still points left and in case of lines, the total length of a line still is bigger then the threshold
-                if ( p.getNumPoints() > 0 ) {
-                    if ( (p.isClosed()) || (p.getPerimeter() > rel_min_length) ) {
-                        p.setId(new_list_primitives.size() + 1);
-                        new_list_primitives.add(p);//push_back(p);
-
-                    } else {
-                        //delete p;
-                    }
-                }
-            }
-
-            // delete _list_primitives;
-        }
-
-        _list_primitives = new_list_primitives;
-    }
-
-
-    /** tries to save the last (upper) polygon from their surrounding polygons
-     * small lines which trace a part of some larger polygon/line will get removed too.
-     *
-     */
-    public void removeSurroundingPrimitives()
-    {
-
-        List <Primitive> new_list_primitives = new ArrayList<Primitive>();
-
-        if (_list_primitives != null) {
-            double pre_tol = PRE_TOL * this.getDiagonalLength();
-
-            double max_dist = SURROUND_TOL_DIST * this.getDiagonalLength(); // normalised maxdistance between points
-            double max_dist2_allowed =  Math.pow(max_dist,2);
-
-            int primitive_count = this.primitivesCount();
-            Primitive p_i = null;
-            Primitive p_j = null;
-            int p_i_points;
-            int p_j_points;
-            Point point_i = null;
-            Point point_j = null;
-
-            ArrayList exclude_list_primitives=new ArrayList();
-
-            for(int i=0;i<primitive_count;i++) {
-//	            std::cout << " i=" << i << std::endl;
-                p_i=this.getPrimitive(i);
-//	            p_i.polySimplify(pre_tol);
-
-                p_i_points=p_i.getNumPoints();
-                double points_needed = SURROUND_TOL_POINTS * p_i_points;
-
-                for(int j=i+1;j<primitive_count;j++) {
-
-                    if ((j!=i) && (!exclude_list_primitives.contains(j))) {
-
-//	                    std::cout << "  j=" << j << std::endl;
-
-                        p_j=this.getPrimitive(j);
-//	                    p_j.polySimplify(pre_tol);
-                        p_j_points=p_j.getNumPoints();
-
-                        double points_needed_j = SURROUND_TOL_POINTS*p_j_points;
-
-                        int points_in_range = 0;
-
-                        //loops through all points of i and j and removes add removes polygon i when all points of polygon j are less far from any point of i then max_dist, i!=j
-                        for(int k=0; k<p_i_points; k++) {
-                            //                    std::cout << "   k=" << k << std::endl;
-                            point_i = p_i.getPoint(k);
-
-                            //search for nearest point_j from point_i
-                            for(int l=0; l<p_j_points; l++) {
-                                //                        std::cout << "    l=" << l << std::endl;
-                                point_j = p_j.getPoint(l);
-                                double cur_dist2 = point_i.distanceTo(point_j);
-
-                                //                        std::cout << "     testing..." << std::endl;
-                                if (cur_dist2 <= max_dist2_allowed) {
-                                    //                            std::cout << "     distance between points is small enough!" << std::endl;
-                                    points_in_range++;
-                                    break;
-                                }
-                                if (points_in_range >= points_needed) {
-                                    break;
-                                }
-
-                            } //end l
-
-                            //if point
-                            //if there are enough points in range the primitive gets excluded
-                            if (points_in_range >= points_needed) {
-                                break;
-                                //if there are enough points in range for the other primitive the other primitive gets excluded (only possible for lines, not polygons)
-                            } else if (points_in_range >= points_needed_j) {
-                                // only possible for lines, because we want the upper polygon, not the outer, because that is probably shadow  (after gradient color polygon combining)
-                                if (!(p_j.isClosed())) {
-                                    //combine bordercolors if needed
-                                    if (!(p_i.getBorderColor().isSet)) {
-                                        Color bc = p_j.getBorderColor();
-                                        p_i.setBorderColor(new Color(bc.red,bc.green,bc.blue,bc.getAlpha(),bc.isSet));
-
+                                        }
+//                                        else { //color not in range or border seperates them
+//                                            int insertedPrimitives = diffPrimitives(prim1, prim2);
+//                                            numberToBeRemoved += 1;
+//
+//                                            //set original prim2 transparent, so it gets excluded
+//                                            prim2.setBorderColor(new Color(
+//                                                    prim2.getBorderColor().getRed(),
+//                                                    prim2.getBorderColor().getGreen(),
+//                                                    prim2.getBorderColor().getBlue(),
+//                                                    0
+//                                                    ));
+//                                            prim2.setFillColor(new Color(
+//                                                    prim2.getFillColor().getRed(),
+//                                                    prim2.getFillColor().getGreen(),
+//                                                    prim2.getFillColor().getBlue(),
+//                                                    0
+//                                                    ));
+//
+//                                            i+=insertedPrimitives;
+//                                        }
+//                                        if (prim1.getBorderColor() != null && prim2.getBorderColor() != null) {
+//
+//                                            int insertedPrimitives = mergePrimitives(prim1, prim2);
+//                                            if (insertedPrimitives > 0) {
+//                                               numberToBeRemoved += 2;
+//
+//                                               //set original primitives transparent, to excluded them
+//                                               prim1.setBorderColor(Color.white);
+//                                               prim1.setFillColor(Color.white);
+//                                               prim2.setBorderColor(Color.white);
+//                                               prim2.setFillColor(Color.white);
+//                                            }
+//
+//                                        }
+//                                        else { //border separates primitives
+//                                            int insertedPrimitives = diffPrimitives(prim1, prim2);
+//                                            numberToBeRemoved += 1;
+//
+//                                            //set original prim2 transparent, so it gets excluded
+//                                            prim2.setBorderColor(Color.white);
+//                                            prim2.setFillColor(Color.white);
+//
+//                                            i+=insertedPrimitives;
+//                                        }
                                     }
-
-                                    //exclude j (line in front) from the new primitive list
-                                    exclude_list_primitives.add(j); //push_back(j);
                                 }
-                                // or if there aren't enough points left to get included eventually, the loop can be stopped
-//	                        } else if ( (points_in_range + ((p_j_points - 1) - l)) < points_needed) {
-                                //break; //EXCEPT FOR THE FACT THAT THIS ISN'T POSSIBLE ANYMORE DUE TO THE EXCLUDE J PART!!!
                             }
-                        } // end k
-
-                        // add point to include list if there are enough points in range and continue with the next primitive
-                        if (points_in_range >= points_needed) {
-                            /*
-                                   std::cout << "excluding: " << points_in_range << "/" << points_needed << std::endl;
-                                   std::cout << " bordercolor: " << (p_j.getBorderColor().isSet) << std::endl;
-                                   std::cout << " isClosed: " << (p_j.isClosed()) << std::endl;
-                                   std::cout << " fillcolor: " << (p_j.getFillColor().isSet) << std::endl;
-
-           */
-                            //combine colors if needed
-                            if (!(p_j.getBorderColor().isSet)) {
-                                Color bc = p_i.getBorderColor();
-                                p_j.setBorderColor(new Color(bc.red,bc.green,bc.blue,bc.getAlpha(),bc.isSet));
-                            }
-
-                            if ((p_j.isClosed()) && (!(p_j.getFillColor().isSet))) {
-                                Color fc = p_i.getFillColor();
-                                p_j.setFillColor(new Color(fc.red,fc.green,fc.blue,fc.getAlpha(),fc.isSet));
-                                //if the one you keep isn't a polygon(but a polyline), BUT the one you exclude is
-                            } else if ((p_i.isClosed()) && (!(p_i.getFillColor().isSet))) {
-                                //then exclude the outer polyline, and keep the inner polygon
-                                if (!(p_i.getBorderColor().isSet)) {
-                                    Color bc = p_j.getBorderColor();
-                                    p_i.setBorderColor(new Color(bc.red,bc.green,bc.blue,bc.getAlpha(),bc.isSet));
-                                }
-
-                                exclude_list_primitives.add(j);//push_back(j);
-                                break;
-                            }
-
-                            //exclude i (one at the back) from the new primitive list
-                            exclude_list_primitives.add(i);//push_back(i);
-                            break;
                         }
-                    } //ends test for doubles
-                } //end j
-            } //end i
-
-            for(int ii=0;ii<primitive_count;ii++) {
-                Primitive p = this.getPrimitive(ii);
-
-                if (!exclude_list_primitives.contains(ii)) {
-                    //resetting the id of the primitive, so it keeps ascending
-                    p.setId(_list_primitives.size()+1);
-                    new_list_primitives.add(p);//push_back(p);
-                } else {
-                    //delete p;
+                    }
                 }
             }
-
-            //delete _list_primitives;
+            //creating new drawing, without primitives which are in the exclude-list
+            for (int j=0;j<this.getNumPrimitives(); j++) {
+                Primitive currPrimitive = this.getPrimitive(j);
+                if (currPrimitive.getBorderColor().isSet() || currPrimitive.getFillColor().isSet()) {
+                    newListPrimitives.add(currPrimitive);
+                }
+            }
         }
-
-        _list_primitives=new_list_primitives;
-
+        this.setPrimitives(newListPrimitives);
     }
 
-
-
-
-    /** helper function, which merges two primitives
+    /**
+     * Calculates the difference between two primitives
      *
-     * @param pr_i	first location to a Primitive in the Drawing to be merged
-     * @param pr_j	second location to a Primitive in the Drawing to be merged
-     *
-     * @return number of primitives created by the merging process
      */
-    public int merge(int pr_i, int pr_j) {
-
-//	    std::cout << "start union van " << pr_j << " with " << pr_i << std::endl;
-
-        //make sure that i is the upper primitive
-        if (pr_i<pr_j) {
-            int t = pr_i;
-            pr_i = pr_j;
-            pr_j = pr_i;
+    public int diffPrimitives(Primitive prim1, Primitive prim2) {
+                //make sure that the first primitive actually comes first
+        Primitive p_i = prim1, p_j = prim2;
+        if (!(prim1.getId() < prim2.getId())) {
+            p_i = prim2;
+            p_j = prim1;
         }
 
-        Primitive p_i = this.getPrimitive(pr_i);
-        Primitive p_j = this.getPrimitive(pr_j);
-
-        //create ordered list of points from this
+        // initialization
         int i_count = p_i.getNumPoints();
         int j_count = p_j.getNumPoints();
 
-        int i=0;
-        int j=0;
         int newPrimitives = 0;
         int insertedNewPrimitives = 0;
-        boolean containsHole = false;
 
+        // create on polygon for each primitive
+        Poly poly1 = new PolyDefault();
+        Poly poly2 = new PolyDefault();
+        Point tempPoint;
 
-        Poly poly1=new PolyDefault();//gpc_polygon poly1=new gpc_polygon();
-        Poly poly2=new PolyDefault();//gpc_polygon poly2=new gpc_polygon();
-        //gpc_polygon result=new gpc_polygon();
-
-        //gpc_vertex_list vertex_list1=new gpc_vertex_list();
-        //gpc_vertex_list vertex_list2=new gpc_vertex_list();
-
-
-        //gpc_vertex_array vertex_array1;
-        //gpc_vertex_array vertex_array2;
-
-
-        /*setting gpc-polygon default values
-          poly1.setContour(null);
-          poly1.setHole(null);
-          poly1.setNum_contours(0);
-
-          poly2.setContour(null);
-          poly2.setHole(null);
-          poly2.setNum_contours(0);
-
-          result.setContour(null);
-          result.setHole(null);
-          result.setNum_contours(0); */
-
-
-        //creating first poly
-        //vertex_array1 =  new gpc_vertex_array(i_count);
-        for(i=0; i<i_count; i++) {
-            poly1.add(p_i.getPoint(i).x, p_i.getPoint(i).y);
-            //gpc_vertex v=vertex_array1.getitem(i);
-            //v.setX(p_i.getPoint(i).x);
-            //v.setY(p_i.getPoint(i).y);
-            //vertex_array1.setitem(i,v);
+        for (int i = 0; i < i_count; i++) {
+            tempPoint = p_i.getPoint(i);
+            poly1.add(tempPoint.getX(), tempPoint.getY());
         }
-        //vertex_list1 = new gpc_vertex_list();
-        //vertex_list1.setNum_vertices(i_count);
-        //vertex_list1.setVertex(vertex_array1.cast());
-
-        //JNI_GPC.gpc_add_contour(poly1, vertex_list1, 0);
-
-        //creating second poly
-        //vertex_array2 = new gpc_vertex_array(j_count);
-        for(i=0; i<j_count; i++) {
-            poly2.add(p_j.getPoint(i).x, p_j.getPoint(i).y);
-            //gpc_vertex v=vertex_array2.getitem(i);
-            //v.setX(p_j.getPoint(i).x);
-            //v.setY(p_j.getPoint(i).y);
-            //vertex_array2.setitem(i,v);
+        for (int i = 0; i < j_count; i++) {
+            tempPoint = p_j.getPoint(i);
+            poly2.add(tempPoint.getX(), tempPoint.getY());
         }
-        //vertex_list2 = new gpc_vertex_list();
-        //vertex_list2.setNum_vertices(j_count);
-        //vertex_list2.setVertex(vertex_array2.cast());
 
-        //JNI_GPC.gpc_add_contour(poly2,vertex_list2,0);
+        Color t1b = p_i.getBorderColor();
+        Color t1f = p_i.getFillColor();
+        Color t2b = p_j.getBorderColor();
+        Color t2f = p_j.getFillColor();
 
-        Color tb = null;
-        Color tf = null;
-        Color t2b = null;
-        Color t2f = null;
-
-        tb = p_i.getBorderColor();
-        tf = p_i.getFillColor();
-        t2b = p_j.getBorderColor();
-        t2f = p_j.getFillColor();
-
-        // ---------- END OF INITIALISATION ---------
-
-        System.out.println("POLY1");
-        ((PolyDefault) poly1).print();
-
-        System.out.println("POLY2");
-        ((PolyDefault) poly2).print();
-
-        //perform the requested operation
-        Poly result=poly1.union(poly2);
-        //JNI_GPC.gpc_polygon_clip(gpc_op.GPC_UNION, poly1,poly2,result);
-
-        System.out.println("RESULT");
-        ((PolyDefault) result).print();
+        // end of initialization
+        // clip polygons
+        Poly result = poly2.diff(poly1);
 
         newPrimitives = result.getNumInnerPoly();
-
-        /*
-          //create and add new primitives from result
-          for (j=0; j<newPrimitives; j++) {
-              if (int_array.frompointer(result.getHole()).getitem(j) == 1) containsHole = true;
-          }
-
-          //cancel operation if the union failed (when it is the same as the original)
-          if (((newPrimitives == 2) &&
-              (int_array.frompointer(result.getHole()).getitem(0) == 0) &&
-              (int_array.frompointer(result.getHole()).getitem(1) == 0)) || containsHole) {
-              newPrimitives = 0;
-          //else continue
-          } else { */
-        Primitive p_new;
-
-        //create and add new primitives from result
-        for (j=0; j<newPrimitives; j++) {
-
-//	                std::cout << "  hole: i=" << pr_i << " j=" << pr_j << " inserted at location:" << insert_place << std::endl;
-
-            //if it isn't an hole, but a unified part
-            boolean isHole=(result.getNumInnerPoly()>1)?false:result.isHole();
-            if(!isHole) { //if (int_array.frompointer(result.getHole()).getitem(j) == 0) {
-                //create a new primitive and insert it at location of the lowest polygon
-                p_new = this.insertNewPrimitive(pr_j); //pr_i
-                insertedNewPrimitives++;
-                assert(p_new!=null);
-
-
-                //give it the avarage fill color of the original
-                if (t2f.isSet) {
-                    p_new.setBorderColor(new Color((tb.red + t2b.red) / 2,(tb.green + t2b.green) / 2,(tb.blue + tb.blue) /2,255,tb.isSet));
-                    p_new.setFillColor(new Color((tf.red + t2f.red) / 2,(tf.green + t2f.green) / 2,(tf.blue + tf.blue) /2,255,tf.isSet));
-                } else {
-                    p_new.setBorderColor(new Color(tb.red,tb.green,tb.blue,tb.getAlpha(),tb.isSet));
-                    p_new.setFillColor(new Color(tf.red,tf.green,tf.blue,tf.getAlpha(),tf.isSet));
-                }
-
-            } else {
-                //when it is a hole, add it at the top and make it white
-                p_new = this.insertNewPrimitive(pr_i + insertedNewPrimitives);
-                assert(p_new!=null);
-
-                p_new.setBorderColor(new Color(tb.red,tb.green,tb.blue,tb.getAlpha(),tb.isSet));
-                p_new.setFillColor(new Color(255,255,255,255,true));
-            }
-
-            // gpc_vertex_list contour=gpc_vertex_list_array.frompointer(result.getContour()).getitem(j);
-            //create the polygon
-            for(i=0; i<result.getNumPoints(); i++) {
-                //gpc_vertex vertex=gpc_vertex_array.frompointer(contour.getVertex()).getitem(i);
-                p_new.addPoint(result.getX(i),result.getY(i));
-            }
-            if (result.getNumPoints() != 0) {
-                //gpc_vertex vertex=gpc_vertex_array.frompointer(contour.getVertex()).getitem(0);
-                p_new.addPoint(result.getX(0),result.getY(0));
-            }
-
-            //confirm it's a polygon
-            p_new.setClosed(p_i.isClosed());
-
-        } // end for
-
-        //} //end doPerform2
-
-
-        // clean up
-        /*
-          result.delete();
-          poly1.delete();
-          poly2.delete();
-
-          vertex_list1.delete();
-          vertex_list2.delete();
-
-          vertex_array1.delete();
-          vertex_array2.delete();*/
-
-//	    std::cout << "finished union" << std::endl;
-
-        return insertedNewPrimitives;
-
-    }
-
-
-    // TODO - diff with GPCJ
-    /** helper function, which difers two primitives
-     *
-     * @param pr_i	first location to a Primitive in the Drawing
-     * @param pr_j	second location to a Primitive in the Drawing to be distracted
-     *
-     * @return number of primitives created by the differentiation process
-     */
-    public int diff(int pr_i, int pr_j) {
-
-//	    std::cout << "start diff van " << pr_j << " with " << pr_i << std::endl;
-
-
-        //make sure that i is the upper primitive
-        if (pr_i<pr_j) {
-            int t = pr_i;
-            pr_i = pr_j;
-            pr_j = pr_i;
-        }
-
-        Primitive p_i = this.getPrimitive(pr_i);
-        Primitive p_j = this.getPrimitive(pr_j);
-
-        //create ordered list of points from this
-        int i_count = p_i.getNumPoints();
-        int j_count = p_j.getNumPoints();
-
-        int i=0;
-        int j=0;
-        int newPrimitives = 0;
-        int insertedNewPrimitives = 0;
-
-        Poly poly1=new PolyDefault();//gpc_polygon poly1=new gpc_polygon();
-        Poly poly2=new PolyDefault();//gpc_polygon poly2=new gpc_polygon();
-        //gpc_polygon result=new gpc_polygon();
-
-        //gpc_vertex_list vertex_list1;
-        //gpc_vertex_list vertex_list2;
-        //gpc_vertex_array vertex_array1, vertex_array2;
-
-        /*setting gpc-polygon default values
-          poly1.setContour(null);
-          poly1.setHole(null);
-          poly1.setNum_contours(0);
-
-          poly2.setContour(null);
-          poly2.setHole(null);
-          poly2.setNum_contours(0);
-
-          result.setContour(null);
-          result.setHole(null);
-          result.setNum_contours(0);
-          */
-
-        //creating first poly
-        //creating first poly
-        //vertex_array1 = new gpc_vertex_array(i_count);
-        for(i=0; i<i_count; i++) {
-            poly1.add(p_i.getPoint(i).x, p_i.getPoint(i).y);
-            //gpc_vertex v=vertex_array1.getitem(i);
-            //v.setX(p_i.getPoint(i).x);
-            //v.setY(p_i.getPoint(i).y);
-            //vertex_array1.setitem(i,v);
-        }
-        //vertex_list1 = new gpc_vertex_list();
-        //vertex_list1.setNum_vertices(i_count);
-        //vertex_list1.setVertex(vertex_array1.cast());
-
-        //JNI_GPC.gpc_add_contour(poly1, vertex_list1, 0);
-
-        //creating second poly
-        //vertex_array2 = new gpc_vertex_array(j_count);
-        for(i=0; i<j_count; i++) {
-            poly2.add(p_j.getPoint(i).x, p_j.getPoint(i).y);
-            //gpc_vertex v=vertex_array2.getitem(i);
-            //v.setX(p_j.getPoint(i).x);
-            //v.setY(p_j.getPoint(i).y);
-            //vertex_array2.setitem(i,v);
-        }
-        //vertex_list2 = new gpc_vertex_list();
-        //vertex_list2.setNum_vertices(j_count);
-        //vertex_list2.setVertex(vertex_array2.cast());
-
-        //JNI_GPC.gpc_add_contour(poly2,vertex_list2,0);
-
-        Color tb = null;
-        Color tf = null;
-        Color t2b = null;
-        Color t2f = null;
-
-        tb = p_i.getBorderColor();
-        tf = p_i.getFillColor();
-        t2b = p_j.getBorderColor();
-        t2f = p_j.getFillColor();
-
-        // ---------- END OF INITIALISATION ---------
-
-        System.out.println("POLY1");
-        ((PolyDefault) poly1).print();
-
-        System.out.println("POLY2");
-        ((PolyDefault) poly2).print();
-
-//	    if (newPrimitives==2) std::cout << "  nr contours:" << result.num_contours << " gat1?" << result.hole[0] << " gat2?" << result.hole[1] << std::endl;
-
-
-        // ---- the real clipping -----
-
-        //perform the requested operation
-        //JNI_GPC.gpc_polygon_clip(gpc_op.GPC_DIFF,poly2,poly1,result);
-        Poly result=poly2.diff(poly1);
-
-        System.out.println("RESULT");
-        ((PolyDefault) result).print();
-
-        newPrimitives = result.getNumInnerPoly();//.getNum_contours();
-
 
         if (newPrimitives != 0) {
             Primitive p_new;
             boolean foundHole=false;
 
             //create and add new primitives from result
-            for (j=0; j<newPrimitives; j++) {
-
-                //        std::cout << "  hole: i=" << pr_i << " j=" << pr_j << " inserted at location:" << insert_place << std::endl;
-
+            for (int j=0; j<newPrimitives; j++) {
                 //set the new object if it isn't a hole
                 boolean isHole=(result.getNumInnerPoly()>1)?false:result.isHole();
 
                 if(!isHole) { //if (int_array.frompointer(result.getHole()).getitem(j) == 0) {
                     //create a new primitive which contains the result and insert it at the bottom
-                    p_new = this.insertNewPrimitive(pr_j);//pr_j + insertedNewPrimitives);
+                    p_new = this.insertNewPrimitive(this.primitives.indexOf(p_j));//pr_j + insertedNewPrimitives);
                     insertedNewPrimitives++;
                     assert(p_new!=null);
 
                     //when creating (a) new primitive(s), let it contain all primitives that p_j contained (doesn't matter that this isn't always true, it is used to reset the height of the contained objects)
 
-                    p_new.setBorderColor(new Color(t2b.red,t2b.green,t2b.blue,t2b.getAlpha(),t2b.isSet));
-                    p_new.setFillColor(new Color(t2f.red,t2f.green,t2f.blue,t2b.getAlpha(),t2f.isSet));
+                    p_new.setBorderColor(new Color(t2b.getRed(),t2b.getGreen(),t2b.getBlue(),t2b.getAlpha(), t2b.isSet()));
+                    p_new.setFillColor(new Color(t2f.getRed(),t2f.getGreen(),t2f.getBlue(),t2f.getAlpha(), t2f.isSet()));
 
-                    //gpc_vertex_list contour=gpc_vertex_list_array.frompointer(result.getContour()).getitem(j);
                     //create the polygon
-                    for(i=0; i<result.getNumPoints(); i++) {
+                    for(int i=0; i<result.getNumPoints(); i++) {
                         //gpc_vertex vertex=gpc_vertex_array.frompointer(contour.getVertex()).getitem(i);
                         p_new.addPoint(result.getX(i),result.getY(i));
                     }
@@ -1649,23 +788,20 @@ public class Drawing implements IEntity<Long>{
                     //if it is a hole
                     foundHole = true;
 
-                    p_new = this.insertNewPrimitive(pr_j+insertedNewPrimitives+1);
+                    p_new = this.insertNewPrimitive(this.primitives.indexOf(p_j) + insertedNewPrimitives+1);
                     insertedNewPrimitives++;
                     assert(p_new!=null);
 
                     //when creating (a) new primitive(s), let it contain all primitives that p_j contained (doesn't matter that this isn't always true, it is used to reset the height of the contained objects)
 
-                    p_new.setBorderColor(new Color(t2b.red,t2b.green,t2b.blue,t2b.getAlpha(),t2b.isSet));
-                    p_new.setFillColor(new Color(255,255,255,255,true));
+                    p_new.setBorderColor(new Color(t2b.getRed(),t2b.getGreen(),t2b.getBlue(),t2b.getAlpha(), t2b.isSet()));
+                    p_new.setFillColor(new Color(255,255,255,255, true));
 
-                    //gpc_vertex_list contour=gpc_vertex_list_array.frompointer(result.getContour()).getitem(j);
                     //create the polygon
-                    for(i=0; i<result.getNumPoints(); i++) {
-                        //gpc_vertex vertex=gpc_vertex_array.frompointer(contour.getVertex()).getitem(i);
+                    for(int i=0; i<result.getNumPoints(); i++) {
                         p_new.addPoint(result.getX(i),result.getY(i));
                     }
                     if (result.getNumPoints() != 0) {
-                        //gpc_vertex vertex=gpc_vertex_array.frompointer(contour.getVertex()).getitem(0);
                         p_new.addPoint(result.getX(0),result.getY(0));
                     }
 
@@ -1676,20 +812,290 @@ public class Drawing implements IEntity<Long>{
             } // end for
 
         }
-
-        /*
-          result.delete();
-          poly1.delete();
-          poly2.delete();
-
-          vertex_list1.delete();
-          vertex_list2.delete();
-
-          vertex_array1.delete();
-          vertex_array2.delete(); */
-
-//	    std::cout << "finished diff" << std::endl;
-
         return insertedNewPrimitives;
+    }
+
+    /**
+     * Merges two primitives
+     *
+     */
+    private int mergePrimitives(Primitive prim1, Primitive prim2) {
+        //make sure that the first primitive actually comes first
+        Primitive p_i = prim1, p_j = prim2;
+        if (!(prim1.getId() < prim2.getId())) {
+            p_i = prim2;
+            p_j = prim1;
+        }
+
+//        if (p_i.getSvgId() == "path3792" || p_j.getSvgId() == "path3792")
+//            System.err.println("test");
+
+        // initialization
+        int p_isize = p_i.getNumPoints();
+        int p_jsize = p_j.getNumPoints();
+
+        int newPrimitives = 0;
+        int insertedNewPrimitives = 0;
+        boolean containsHole = false;
+
+        // create on polygon for each primitive
+        Poly poly1 = new PolyDefault();
+        Poly poly2 = new PolyDefault();
+        Point tempPoint;
+
+        for (int i = 0; i < p_isize; i++) {
+            tempPoint = p_i.getPoint(i);
+            poly1.add(tempPoint.getX(), tempPoint.getY());
+        }
+        for (int i = 0; i < p_jsize; i++) {
+            tempPoint = p_j.getPoint(i);
+            poly2.add(tempPoint.getX(), tempPoint.getY());
+        }
+
+        Color t1b = p_i.getBorderColor();
+        Color t1f = p_i.getFillColor();
+        Color t2b = p_j.getBorderColor();
+        Color t2f = p_j.getFillColor();
+
+        // end of initialization
+        // clip polygons (union = merge)
+        Poly result = poly1.union(poly2);
+        newPrimitives = result.getNumInnerPoly();
+
+        Primitive p_new;
+
+        //create and add new primitives from result
+        for (int j = 0; j<newPrimitives; j++) {
+            //if it isn't an hole, but a unified part
+            boolean isHole=(result.getNumInnerPoly()>1)?false:result.isHole();
+            if(!isHole) { //if (int_array.frompointer(result.getHole()).getitem(j) == 0) {
+                //create a new primitive and insert it at location of the lowest polygon
+                p_new = this.insertNewPrimitive(this.primitives.indexOf(p_j)); //pr_i
+                insertedNewPrimitives++;
+                assert(p_new!=null);
+
+                //give it the avarage fill color of the original
+                if (t2f.isSet()) {
+                    p_new.setBorderColor(new Color((t1b.getRed() + t2b.getRed()) / 2,(t1b.getGreen() + t2b.getGreen()) / 2,(t1b.getBlue() + t1b.getBlue()) /2, (t1b.getAlpha() + t2b.getAlpha())/2, t1b.isSet()));
+                    p_new.setFillColor(new Color((t1f.getRed() + t2f.getRed()) / 2,(t1f.getGreen() + t2f.getGreen()) / 2,(t1f.getBlue() + t1f.getBlue()) /2,(t1f.getAlpha()+t2f.getAlpha())/2, t1f.isSet()));
+                } else {
+                    p_new.setBorderColor(new Color(t1b.getRed(),t1b.getGreen(),t1b.getBlue(),t1b.getAlpha(), t1b.isSet()));
+                    p_new.setFillColor(new Color(t1f.getRed(),t1f.getGreen(),t1f.getBlue(),t1f.getAlpha(), t1f.isSet()));
+                }
+
+            } else {
+                //when it is a hole, add it at the top and make it white
+                p_new = this.insertNewPrimitive(this.primitives.indexOf(p_i) + insertedNewPrimitives);
+                assert(p_new!=null);
+
+                p_new.setBorderColor(new Color(t1b.getRed(),t1b.getGreen(),t1b.getBlue(),t1b.getAlpha(), t1b.isSet()));
+                p_new.setFillColor(new Color(255,255,255,255, true));
+            }
+
+            //create the polygon
+            for(int i=0; i<result.getNumPoints(); i++) {
+                //gpc_vertex vertex=gpc_vertex_array.frompointer(contour.getVertex()).getitem(i);
+                p_new.addPoint(result.getX(i),result.getY(i));
+            }
+            if (result.getNumPoints() != 0) {
+                //gpc_vertex vertex=gpc_vertex_array.frompointer(contour.getVertex()).getitem(0);
+                p_new.addPoint(result.getX(0),result.getY(0));
+            }
+
+            //confirm it's a polygon
+            p_new.setClosed(p_i.isClosed());
+
+        }
+        return insertedNewPrimitives;
+    }
+
+    /** Removes small primitives in the drawing
+     *
+     */
+    private void removeSmallPrimitives(double areaTolerance) {
+        ArrayList<Primitive> newListPrimitives = new ArrayList<Primitive>();
+
+        if (this.getNumPrimitives() != 0) {
+            int size = this.getNumPrimitives();
+
+            //based on percentage of the total area
+            double thresholdSize = areaTolerance * this.getArea();
+
+            //optimize the drawing by removing small primitives
+	    for (int i = 0; i < size; i++) {
+                Primitive p = this.getPrimitive(i);
+                // check if the primitive isn't invisible
+                if ((p.getFillColor()).isSet() || (p.getBorderColor().isSet())){
+                    //add to new list, when there isn't an areaSize or when the areaSize is above the threshold
+                    if ((p.getAreaSize() == -1) || (p.getAreaSize() > thresholdSize)) {
+                        p.setId(new Long(newListPrimitives.size()+1));
+                        newListPrimitives.add(p);
+                    }
+                    else {
+                        newListPrimitives.remove(p);
+                    }
+                }
+            }
+
+            this.setPrimitives(newListPrimitives);
+        }
+    }
+
+    /** Remove vertices from all primitives, which distance between each other are too small
+     * if 2 edges are left and the distance between each other is to small too,
+     * then the whole primitive is removed
+     */
+    private void reduceVertexCount(double v_tolerance, double l_tolerance) {
+        ArrayList<Primitive> newListPrimitives = new ArrayList<Primitive>();
+        int indexFirst = 1;
+        int indexLast = 0;
+        ArrayList<Point> matchArray = new ArrayList<Point>();
+        int drawingSize = this.getNumPrimitives();
+
+        if (drawingSize != 0){
+
+            double relativeTolerance = v_tolerance * this.getDiagonalLength();
+            double relMinLength = l_tolerance * this.getDiagonalLength();
+            Primitive p = new Primitive();
+
+            //optimize all primitives by removing some small primitives and small lines withing primitives
+            for (int i=0; i < drawingSize; i++) {
+                p = this.getPrimitive(i);
+                indexLast = p.getNumPoints() - 1;
+                p.polySimplify(relativeTolerance);
+
+                //add to new list, when there are still points left and in case of lines, the total length of a line still is bigger then the threshold
+                if (p.getNumPoints() > 0 ) {
+                    if (p.isClosed() || (p.getPerimeter() > relMinLength) ) {
+                        p.setId(new Long(newListPrimitives.size() + 1));
+                        newListPrimitives.add(p);
+                    }
+                    else {
+                        newListPrimitives.remove(p);
+                    }
+                }
+            }
+
+            this.setPrimitives(newListPrimitives);
+        }
+    }
+
+    /**
+     * Returns a string representation of the drawing.
+     * @return a string representation of the drawing.
+     */
+    @Override
+    public String toString(){
+        StringBuilder stringBuffer = new StringBuilder();
+        Primitive p;
+        stringBuffer.append("Drawing with id: ").append(id).append(System.getProperty("line.separator"));
+	for (int i = 0; i < primitives.size(); i++) {
+		p = primitives.get(i);
+                stringBuffer.append(p.toString()).append(System.getProperty("line.separator"));
+	}
+	return stringBuffer.toString();
+    }
+
+    /**
+     * TODO Gabe: documentar
+     * @param path
+     * @throws IOException
+     */
+    public void export(String path) throws IOException {
+        double preferredWidth = 640;
+        double preferredHeight = 640;
+
+        double dw = getWidth();
+        double dh = getHeight();
+        if (dw <= 0) dw = 1;
+        if (dh <= 0) dh = 1;
+        double pw = preferredWidth;
+        double ph = preferredHeight;
+        boolean isLandscape = (dw >= dh ? true : false);
+        double xlim;
+        double ylim;
+        if (isLandscape) {
+            xlim = pw; //(dw > pw ? pw : dw);
+            ylim = xlim * (dh/dw);
+        } else {
+            ylim = ph; //(dh > ph ? ph : dh);
+            xlim = ylim * (dw/dh);
+        }
+
+        double xratio = xlim/dw;
+        double yratio = ylim/dh;
+
+        BufferedImage bi = new BufferedImage((int)xlim, (int)ylim, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D ig2 = bi.createGraphics();
+        draw(ig2, xratio, yratio);
+        ImageIO.write(bi, "PNG", new File(path + ".png"));
+    }
+
+    /**
+     * TODO Gabe: documentar
+     * @param g2d
+     * @param xratio
+     * @param yratio
+     */
+    //TO DO - uncomment the setColor parts to complete the code!
+    public void draw(Graphics2D g2d, double xratio, double yratio) {
+        g2d.setBackground(java.awt.Color.WHITE);
+        Polygon polygon;
+        Color fill, stroke;
+        float alpha;
+        double xmin = getXmin();
+        double ymin = getYmin();
+
+        for (Primitive primitive : getAllPrimitives()) {
+            g2d.setStroke(new BasicStroke(new Double(primitive.getBorderWidth()).floatValue()));
+            fill = primitive.getFillColor();
+            stroke = primitive.getBorderColor();
+            if (primitive.isClosed()) { // it's a polygon
+                polygon = new Polygon();
+                for (Point point : primitive.getPoints()) {
+                    polygon.addPoint((int) ((point.getX() - xmin) * xratio) , (int) ((point.getY() - ymin) * yratio));
+                }
+                g2d.setColor(new java.awt.Color(fill.getRed(), fill.getGreen(), fill.getBlue()));
+                alpha = (float) fill.getAlpha() / 255.0f;
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+                g2d.fillPolygon(polygon);
+                alpha = (float) stroke.getAlpha() / 255.0f;
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+                g2d.setColor(new java.awt.Color(stroke.getRed(), stroke.getGreen(), stroke.getBlue()));
+                g2d.drawPolygon(polygon);
+            }
+            else { // it's a polyline
+                ArrayList<Point> points = primitive.getPoints();
+                int len = points.size();
+                Point point;
+                int[] xpoints = new int[len];
+                int[] ypoints = new int[len];
+                for (int i = 0; i < len; i++) {
+                    point = points.get(i);
+                    xpoints[i] = (int)((point.getX() - xmin) * xratio);
+                    ypoints[i] = (int)((point.getY() - ymin) * yratio);
+                }
+                Polygon p = new Polygon(xpoints, ypoints, len);
+                g2d.setColor(new java.awt.Color(fill.getRed(), fill.getGreen(), fill.getBlue()));
+                alpha = fill.getAlpha(); //already in the [0,1] interval
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+                g2d.fillPolygon(p);
+                alpha = stroke.getAlpha();  //already in the [0,1] interval
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+                g2d.setColor(new java.awt.Color(stroke.getRed(), stroke.getGreen(), stroke.getBlue()));
+                g2d.drawPolyline(xpoints, ypoints, len);
+            }
+        }
+    }
+
+    @Override
+    public Drawing clone() {
+        Drawing drawing = new Drawing(this.getId());
+        ArrayList<Primitive> prims = this.getAllPrimitives();
+        ArrayList<Primitive> newPrims = new ArrayList<Primitive>();
+        for (Primitive prim : prims)
+            newPrims.add(prim.clone());
+        drawing.setPrimitives(newPrims);
+        return drawing;
     }
 }
