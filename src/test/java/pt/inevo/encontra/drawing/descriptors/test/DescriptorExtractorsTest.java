@@ -54,9 +54,6 @@ public class DescriptorExtractorsTest extends TestCase {
         }
         System.out.println();
 
-        for (;;) {
-
-        }
 
 //        Assert.assertArrayEquals(expectedResult, values);
     }

@@ -3,6 +3,9 @@ package pt.inevo.encontra.drawing.descriptors.Topogeo;
 import edu.uci.ics.jung.graph.util.EdgeType;
 import pt.inevo.encontra.graph.GraphEdge;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+
 /**
  * This class represents a topology graph edge. Such an edge represents a link
  * between two drawing primitives.
@@ -11,7 +14,7 @@ import pt.inevo.encontra.graph.GraphEdge;
 public class TopogeoEdge extends GraphEdge {
 //public class TopogeoEdge extends GraphInclusionEdge {
 
-    private float value;
+    private double value;
     private Type type;
 
     @Override
@@ -60,7 +63,7 @@ public class TopogeoEdge extends GraphEdge {
      * two drawing primitives.
      * @param type the type of edge. It can be a Parental, Adjacency or Feature edge.
      */
-    public TopogeoEdge(float val, Type type) {
+    public TopogeoEdge(double val, Type type) {
         super(null, null);
         this.value = val;
         this.type = type;
@@ -70,7 +73,7 @@ public class TopogeoEdge extends GraphEdge {
      * Returns the edge value.
      * @return the edge value.
      */
-    public float getValue() {
+    public double getValue() {
         return value;
     }
 
@@ -88,6 +91,7 @@ public class TopogeoEdge extends GraphEdge {
      */
     @Override
     public String toString() {
-        return type.toString() + " " + value;
+         DecimalFormat df = new DecimalFormat("#.##");
+        return type.toString() + " " + df.format(value);
     }
 }

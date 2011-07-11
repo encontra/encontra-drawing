@@ -655,7 +655,7 @@ public class Primitive implements HasDistance<Primitive>, IEntity<Long> {
      * @return the shortest distance (between points)
      */
     public double getShortestDistance(Primitive other) {
-        double currentLowestDistance = Double.POSITIVE_INFINITY;// numeric_limits<double>::infinity();
+        double currentLowestDistance = Double.MAX_VALUE;// numeric_limits<double>::infinity();
 
         int i;
         int j;
