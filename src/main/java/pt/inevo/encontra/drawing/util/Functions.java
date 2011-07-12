@@ -229,4 +229,34 @@ public class Functions {
         }
         return points;
     }
+
+    public static String matrixToString(double[][] mat, int padding, int precision, boolean htmlNewLine) {
+        if (mat == null)
+            return "null";
+
+        String format = "0";
+        for (int i = 1; i < padding; i++) {
+            format += "0";
+        }
+        for (int i = 0; i < precision; i++) {
+            if (i == 0)
+                format += ".";
+            format += "0";
+        }
+        DecimalFormat decFormat = new DecimalFormat(format);
+
+        StringBuilder string = new StringBuilder();
+        for (int i = 0; i < mat.length; i++) {
+            string.append("|");
+            for (int j = 0; j < mat[i].length; j++) {
+                string.append(decFormat.format(mat[i][j]));
+                if (j < mat[j].length - 1)
+                    string.append(" ");
+                }
+            string.append("|");
+            if (i < mat.length - 1)
+                string.append((htmlNewLine ? "<br>" : System.getProperty("line.separator")));
+        }
+        return string.toString();
+    }
 }

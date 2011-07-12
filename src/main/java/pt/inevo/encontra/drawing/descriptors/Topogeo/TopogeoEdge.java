@@ -4,7 +4,6 @@ import edu.uci.ics.jung.graph.util.EdgeType;
 import pt.inevo.encontra.graph.GraphEdge;
 
 import java.text.DecimalFormat;
-import java.text.NumberFormat;
 
 /**
  * This class represents a topology graph edge. Such an edge represents a link
@@ -12,7 +11,6 @@ import java.text.NumberFormat;
  * @author Gabriel
  */
 public class TopogeoEdge extends GraphEdge {
-//public class TopogeoEdge extends GraphInclusionEdge {
 
     private double value;
     private Type type;
