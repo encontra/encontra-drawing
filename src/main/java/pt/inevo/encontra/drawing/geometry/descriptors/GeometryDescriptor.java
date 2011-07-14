@@ -3,7 +3,6 @@ package pt.inevo.encontra.drawing.geometry.descriptors;
 
 import pt.inevo.encontra.common.distance.DistanceMeasure;
 import pt.inevo.encontra.common.distance.EuclideanDistanceMeasure;
-import pt.inevo.encontra.common.distance.SquaredEuclideanDistanceMeasure;
 import pt.inevo.encontra.descriptors.Descriptor;
 import pt.inevo.encontra.drawing.Drawing;
 import pt.inevo.encontra.index.Vector;
@@ -28,6 +27,11 @@ public class GeometryDescriptor<O extends Drawing>  extends Vector<Double> imple
     @Override
     public double getDistance(Descriptor other) {
         return distanceMeasure.distance(this,other);
+    }
+
+    @Override
+    public double getNorm() {
+        return super.norm(2);
     }
 
     @Override

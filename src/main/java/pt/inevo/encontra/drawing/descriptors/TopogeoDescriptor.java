@@ -25,6 +25,11 @@ public class TopogeoDescriptor extends Vector<Double> implements Descriptor {
     }
 
     @Override
+    public double getNorm() {
+        return super.norm(2);
+    }
+
+    @Override
     public double getDistance(Descriptor other) {
         return distanceMeasure.distance(this, other);
     }

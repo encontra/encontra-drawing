@@ -967,6 +967,12 @@ public class Primitive implements HasDistance<Primitive>, IEntity<Long> {
         return this.getShortestDistance(other);
     }
 
+    @Override
+    public double getNorm() {
+        // TODO what should this return?
+        return 0;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
     public ArrayList<Point> getPoints() {
         return this.points;
     }
