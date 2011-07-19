@@ -13,7 +13,7 @@ public class CIGeometric {
     private CIStroke stroke;	//!< Strokes, are made up of points.
 
     public CIGeometric() {
-        feat = new CIEvaluate ();
+        //feat = new CIEvaluate();
         sc = null;
         stroke = null;
     }
@@ -50,51 +50,51 @@ public class CIGeometric {
         /* What does cad do? Nobody knows, we only use cad=true. ~Alper */
         if (cad) {
             // Special ratios
-            result.add(1 / feat.Tl_Pch(sc) );
-            result.add(1 / feat.Pch2_Ach(sc));
+            result.add(1 / CIEvaluate.Tl_Pch.evaluate(sc) );
+            result.add(1 / CIEvaluate.Pch2_Ach.evaluate(sc));
 
             // Other special ones
-            result.add(feat.Her_Wer (sc));
+            result.add(CIEvaluate.Her_Wer.evaluate(sc));
 
             // Area ratios
-            result.add( feat.Alq_Aer(sc));
-            result.add(feat.Ach_Aer(sc));
-            result.add(feat.Alq_Ach(sc));
-            result.add(feat.Alt_Alq(sc));
-            result.add( feat.Alt_Ach(sc));
+            result.add( CIEvaluate.Alq_Aer.evaluate(sc));
+            result.add(CIEvaluate.Ach_Aer.evaluate(sc));
+            result.add(CIEvaluate.Alq_Ach.evaluate(sc));
+            result.add(CIEvaluate.Alt_Alq.evaluate(sc));
+            result.add( CIEvaluate.Alt_Ach.evaluate(sc));
 
             // Perimeter ratios
-            result.add(feat.Plq_Pch(sc));
-            result.add(feat.Plt_Pch(sc));
-            result.add(feat.Pch_Per(sc));
+            result.add(CIEvaluate.Plq_Pch.evaluate(sc));
+            result.add(CIEvaluate.Plt_Pch.evaluate(sc));
+            result.add(CIEvaluate.Pch_Per.evaluate(sc));
 
         } else {
             // Special ratios
-            result.add(1 / feat.Tl_Pch(sc));
-            result.add( 1 / feat.Pch2_Ach(sc));
+            result.add(1 / CIEvaluate.Tl_Pch.evaluate(sc));
+            result.add( 1 / CIEvaluate.Pch2_Ach.evaluate(sc));
 
             // Other special ones
-            result.add( feat.Her_Wer (sc));
+            result.add( CIEvaluate.Her_Wer.evaluate(sc));
 
             // Area ratios
-            result.add( feat.Ach_Aer(sc));
-            result.add( feat.Alq_Ach(sc));
-            result.add( feat.Alt_Alq(sc));
-            result.add( feat.Alt_Ach(sc));
-            result.add( feat.Alq_Aer(sc));
+            result.add( CIEvaluate.Ach_Aer.evaluate(sc));
+            result.add( CIEvaluate.Alq_Ach.evaluate(sc));
+            result.add( CIEvaluate.Alt_Alq.evaluate(sc));
+            result.add( CIEvaluate.Alt_Ach.evaluate(sc));
+            result.add( CIEvaluate.Alq_Aer.evaluate(sc));
 
             // Perimeter ratios
-            result.add( feat.Plq_Pch(sc));
-            result.add( feat.Plt_Pch(sc));
-            result.add( feat.Pch_Per(sc));
+            result.add( CIEvaluate.Plq_Pch.evaluate(sc));
+            result.add( CIEvaluate.Plt_Pch.evaluate(sc));
+            result.add( CIEvaluate.Pch_Per.evaluate(sc));
 
-            result.add( feat.Hollowness(sc) / 10);
+            result.add( CIEvaluate.Hollowness.evaluate(sc) / 10);
 
-            result.add( feat.Ach_Abb(sc));
-            result.add( feat.Alt_Abb(sc));
-            result.add( feat.Pch_Pbb(sc));
-            result.add( feat.Aer_Abb(sc));
-            result.add( feat.Alq_Abb(sc));
+            result.add( CIEvaluate.Ach_Abb.evaluate(sc));
+            result.add( CIEvaluate.Alt_Abb.evaluate(sc));
+            result.add( CIEvaluate.Pch_Pbb.evaluate(sc));
+            result.add( CIEvaluate.Aer_Abb.evaluate(sc));
+            result.add( CIEvaluate.Alq_Abb.evaluate(sc));
         }
 
         for(int i=0;i<result.size();i++)

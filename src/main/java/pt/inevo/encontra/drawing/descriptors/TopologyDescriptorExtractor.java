@@ -1,6 +1,5 @@
 package pt.inevo.encontra.drawing.descriptors;
 
-
 import pt.inevo.encontra.descriptors.MultiDescriptorExtractor;
 import pt.inevo.encontra.index.IndexedObject;
 import pt.inevo.encontra.index.Vector;
@@ -24,7 +23,5 @@ public class TopologyDescriptorExtractor extends MultiDescriptorExtractor<Indexe
         }
         return descriptors;
     }
-
-
 
 }

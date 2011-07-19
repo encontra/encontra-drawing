@@ -997,11 +997,41 @@ public class Drawing implements IEntity<Long> {
     }
 
     /**
-     * TODO Gabe: documentar
      * @param path
      * @throws IOException
      */
     public void export(String path) throws IOException {
+        /*double preferredWidth = 640;
+        double preferredHeight = 640;
+
+        double dw = getWidth();
+        double dh = getHeight();
+        if (dw <= 0) dw = 1;
+        if (dh <= 0) dh = 1;
+        double pw = preferredWidth;
+        double ph = preferredHeight;
+        boolean isLandscape = (dw >= dh ? true : false);
+        double xlim;
+        double ylim;
+        if (isLandscape) {
+            xlim = pw; //(dw > pw ? pw : dw);
+            ylim = xlim * (dh/dw);
+        } else {
+            ylim = ph; //(dh > ph ? ph : dh);
+            xlim = ylim * (dw/dh);
+        }
+
+        double xratio = xlim/dw;
+        double yratio = ylim/dh;
+
+        BufferedImage bi = new BufferedImage((int)xlim, (int)ylim, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D ig2 = bi.createGraphics();
+        draw(ig2, xratio, yratio);         */
+        BufferedImage bi = getImage();
+        ImageIO.write(bi, "PNG", new File(path + ".png"));
+    }
+
+    public BufferedImage getImage() throws IOException {
         double preferredWidth = 640;
         double preferredHeight = 640;
 
@@ -1028,7 +1058,7 @@ public class Drawing implements IEntity<Long> {
         BufferedImage bi = new BufferedImage((int)xlim, (int)ylim, BufferedImage.TYPE_INT_ARGB);
         Graphics2D ig2 = bi.createGraphics();
         draw(ig2, xratio, yratio);
-        ImageIO.write(bi, "PNG", new File(path + ".png"));
+        return bi;
     }
 
     /**
