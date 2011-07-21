@@ -2,6 +2,11 @@ package pt.inevo.encontra.drawing;
 
 import com.seisw.util.geom.Poly;
 import com.seisw.util.geom.PolyDefault;
+import org.apache.batik.transcoder.TranscoderException;
+import org.apache.batik.transcoder.TranscoderInput;
+import org.apache.batik.transcoder.TranscoderOutput;
+import org.apache.batik.transcoder.image.ImageTranscoder;
+import org.w3c.dom.svg.SVGDocument;
 import pt.inevo.encontra.drawing.util.Color;
 import pt.inevo.encontra.geometry.Point;
 import pt.inevo.encontra.storage.IEntity;
@@ -17,12 +22,15 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
-* This class represents a format for vector-based images.
-* @author Gabriel
-*/
+ * This class represents a format for vector-based images.
+ *
+ * @author Gabriel
+ */
 public class Drawing implements IEntity<Long> {
     private ArrayList<Primitive> primitives;
     private long id;
+    private String filename;
+    private SVGDocument document;
 
     /**
      * Creates a new Drawing.
@@ -34,6 +42,7 @@ public class Drawing implements IEntity<Long> {
 
     /**
      * Creates a new Drawing.
+     *
      * @param id the drawing's identifier.
      */
     public Drawing(long id) {
@@ -50,6 +59,7 @@ public class Drawing implements IEntity<Long> {
 
     /**
      * Returns all primitives of the drawing.
+     *
      * @return all primitives of the drawing.
      */
     public ArrayList<Primitive> getAllPrimitives() {
@@ -58,6 +68,7 @@ public class Drawing implements IEntity<Long> {
 
     /**
      * Replaces all primitives of the drawing.
+     *
      * @param primitives the primitives to set.
      */
     public void setPrimitives(ArrayList<Primitive> primitives) {
@@ -76,20 +87,20 @@ public class Drawing implements IEntity<Long> {
 
         int size = primitives.size();
 
-        Primitive [] primitiveArray = new Primitive[size];
+        Primitive[] primitiveArray = new Primitive[size];
 
         // Copy pointers to a temporary array
-        for(int i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++) {
             primitiveArray[i] = primitives.get(i);
         }
 
-        while(orderedPrimitives.size() != primitives.size()) {
+        while (orderedPrimitives.size() != primitives.size()) {
             double xPointer = Double.MAX_VALUE;//std::numeric_limits<double>::max();
             int indexPointer = Integer.MIN_VALUE;//std::numeric_limits<int>::min();
 
             for (int j = 0; j < size; j++) {
-                if(primitiveArray[j] != null) {
-                    if(primitiveArray[j].getXmin() <= xPointer) {
+                if (primitiveArray[j] != null) {
+                    if (primitiveArray[j].getXmin() <= xPointer) {
                         xPointer = primitiveArray[j].getXmin();
                         indexPointer = j;
                     }
@@ -102,31 +113,32 @@ public class Drawing implements IEntity<Long> {
     }
 
     // Indagare
+
     /**
      * Returns the primitives sorted by area.
      *
      * @return the primitives sorted by area.
-     * */
+     */
     List<Primitive> getAllPrimitivesSortedByArea() {
         // std::vector<Primitive*>
         List<Primitive> orderedPrimitives = new ArrayList<Primitive>();
 
         int size = primitives.size();
 
-        Primitive [] primitiveArray = new Primitive[size];
+        Primitive[] primitiveArray = new Primitive[size];
 
         // Copy pointers to a temporary array
-        for(int i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++) {
             primitiveArray[i] = primitives.get(i);
         }
 
-        while(orderedPrimitives.size() != primitives.size()) {
+        while (orderedPrimitives.size() != primitives.size()) {
             double aPointer = Double.MAX_VALUE;
             int indexPointer = Integer.MIN_VALUE;
 
             for (int j = 0; j < size; j++) {
-                if(primitiveArray[j] != null) {
-                    if(primitiveArray[j].getAreaSize() <= aPointer) {
+                if (primitiveArray[j] != null) {
+                    if (primitiveArray[j].getAreaSize() <= aPointer) {
                         aPointer = primitiveArray[j].getAreaSize();
                         indexPointer = j;
                     }
@@ -140,6 +152,7 @@ public class Drawing implements IEntity<Long> {
 
     /**
      * Returns the id of the drawing.
+     *
      * @return the id of the drawing.
      */
     @Override
@@ -149,6 +162,7 @@ public class Drawing implements IEntity<Long> {
 
     /**
      * Sets the id of the drawing.
+     *
      * @param id the id to set.
      */
     @Override
@@ -158,139 +172,143 @@ public class Drawing implements IEntity<Long> {
 
     /**
      * Returns the width of the drawing.
+     *
      * @return the width of the drawing.
      */
     public double getWidth() {
         if (getNumPrimitives() > 0) {
             double xmin = primitives.get(0).getXmin(), min;
             double xmax = primitives.get(0).getXmax(), max;
-            for (int i=1; i<primitives.size(); i++) {
-                    min = primitives.get(i).getXmin();
-                    max = primitives.get(i).getXmax();
-                    if (min<xmin) xmin=min;
-                    if (max>xmax) xmax=max;
+            for (int i = 1; i < primitives.size(); i++) {
+                min = primitives.get(i).getXmin();
+                max = primitives.get(i).getXmax();
+                if (min < xmin) xmin = min;
+                if (max > xmax) xmax = max;
             }
-            return Math.abs(xmax-xmin);
-        }
-        else
+            return Math.abs(xmax - xmin);
+        } else
             return 0;
     }
 
     /**
      * Returns the height of the drawing.
+     *
      * @return the height of the drawing.
      */
     public double getHeight() {
         if (getNumPrimitives() > 0) {
             double ymin = primitives.get(0).getYmin(), min;
             double ymax = primitives.get(0).getYmax(), max;
-            for (int i=1; i<primitives.size(); i++) {
-                    min = primitives.get(i).getYmin();
-                    max = primitives.get(i).getYmax();
-                    if (min<ymin) ymin=min;
-                    if (max>ymax) ymax=max;
+            for (int i = 1; i < primitives.size(); i++) {
+                min = primitives.get(i).getYmin();
+                max = primitives.get(i).getYmax();
+                if (min < ymin) ymin = min;
+                if (max > ymax) ymax = max;
             }
-            return Math.abs(ymax-ymin);
-        }
-        else
+            return Math.abs(ymax - ymin);
+        } else
             return 0;
     }
 
     /**
      * Returns the minimum value of the x coordinate for this drawing.
+     *
      * @return the minimum value of the x coordinate for this drawing.
      */
     public double getXmin() {
         if (getNumPrimitives() > 0) {
             double xmin = primitives.get(0).getXmin(), min;
-            for (int i=1; i<primitives.size(); i++) {
-                    min = primitives.get(i).getXmin();
-                    if (min<xmin) xmin=min;
+            for (int i = 1; i < primitives.size(); i++) {
+                min = primitives.get(i).getXmin();
+                if (min < xmin) xmin = min;
             }
             return xmin;
-        }
-        else
+        } else
             return 0;
     }
 
     /**
      * Returns the maximum value of the x coordinate for this drawing.
+     *
      * @return the maximum value of the x coordinate for this drawing.
      */
     public double getXmax() {
         if (getNumPrimitives() > 0) {
             double xmax = primitives.get(0).getXmax(), max;
-            for (int i=1; i<primitives.size(); i++) {
-                    max = primitives.get(i).getXmax();
-                    if (max>xmax) xmax=max;
+            for (int i = 1; i < primitives.size(); i++) {
+                max = primitives.get(i).getXmax();
+                if (max > xmax) xmax = max;
             }
             return xmax;
-        }
-        else
+        } else
             return 0;
     }
 
     /**
      * Returns the minimum value of the y coordinate for this drawing.
+     *
      * @return the minimum value of the y coordinate for this drawing.
      */
     public double getYmin() {
         if (getNumPrimitives() > 0) {
             double ymin = primitives.get(0).getYmin(), min;
-            for (int i=1; i<primitives.size(); i++) {
-                    min = primitives.get(i).getYmin();
-                    if (min<ymin) ymin=min;
+            for (int i = 1; i < primitives.size(); i++) {
+                min = primitives.get(i).getYmin();
+                if (min < ymin) ymin = min;
             }
             return ymin;
-        }
-        else
+        } else
             return 0;
     }
 
     /**
      * Returns the maximum value of the y coordinate for this drawing.
+     *
      * @return the maximum value of the y coordinate for this drawing.
      */
     public double getYmax() {
         if (getNumPrimitives() > 0) {
             double ymax = primitives.get(0).getYmax(), max;
-            for (int i=1; i<primitives.size(); i++) {
-                    max = primitives.get(i).getYmax();
-                    if (max>ymax) ymax=max;
+            for (int i = 1; i < primitives.size(); i++) {
+                max = primitives.get(i).getYmax();
+                if (max > ymax) ymax = max;
             }
             return ymax;
-        }
-        else
+        } else
             return 0;
     }
 
     /**
      * Returns the diagonal length of the drawing.
+     *
      * @return the diagonal length of the drawing.
      */
     public double getDiagonalLength() {
-        return Math.sqrt((getWidth()*getWidth()) + (getHeight()*getHeight()));
+        return Math.sqrt((getWidth() * getWidth()) + (getHeight() * getHeight()));
     }
 
     /**
      * Returns the area of the drawing.
+     *
      * @return the area of the drawing.
      */
     public double getArea() {
-        return getWidth()*getHeight();
+        return getWidth() * getHeight();
     }
 
     /**
      * Adds a primitive to the drawing.
+     *
      * @param primitive the primitive to be added.
      */
     public void addPrimitive(Primitive primitive) {
-        primitive.setId(new Long(primitives.size()+1));
+        primitive.setId(new Long(primitives.size() + 1));
         primitives.add(primitive);
     }
 
     /**
      * Adds a new primitive to this drawing.
+     *
      * @return the newly created primitive.
      */
     public Primitive createNewPrimitive() {
@@ -301,24 +319,26 @@ public class Drawing implements IEntity<Long> {
 
     /**
      * Inserts a primitive to the drawing at the specified location.
+     *
      * @param primitive the primitive to be added.
-     * @param index the position in the primitive list to which the primitive
-     * will be added.
+     * @param index     the position in the primitive list to which the primitive
+     *                  will be added.
      * @return false if the location doesn't exist.
      */
     public boolean insertPrimitive(Primitive primitive, int index) {
         if ((index < 0) || (index > primitives.size()))
             return false;
 
-        primitive.setId(new Long(primitives.size()+1));
+        primitive.setId(new Long(primitives.size() + 1));
         primitives.add(index, primitive);
         return true;
     }
 
     /**
      * Inserts a new primitive at the specified location.
+     *
      * @param index the position in the primitive list to which the new
-     * primitive will be added.
+     *              primitive will be added.
      * @return the new primitive or null if the position doesn't exist.
      */
     public Primitive insertNewPrimitive(int index) {
@@ -331,6 +351,7 @@ public class Drawing implements IEntity<Long> {
 
     /**
      * Returns the primitive located at the supplied position.
+     *
      * @param index the index of the primitive to return.
      * @return the primitive at the specified position.
      */
@@ -341,6 +362,7 @@ public class Drawing implements IEntity<Long> {
     /**
      * Returns a list with all primitives of the drawing, sorted according
      * to the x axis.
+     *
      * @return all primitives in the drawing, sorted in the x axis.
      */
     public ArrayList<Primitive> getPrimitivesSortedX() {
@@ -356,6 +378,7 @@ public class Drawing implements IEntity<Long> {
     /**
      * Returns a list with all primitives of the drawing, sorted by the following
      * criteria...
+     *
      * @return all primitives in the drawing, sorted.
      */
     public ArrayList<Primitive> getPrimitivesSorted() {
@@ -367,6 +390,7 @@ public class Drawing implements IEntity<Long> {
 
     /**
      * Returns the number of primitives in the drawing.
+     *
      * @return the number of primitives in the drawing.
      */
     public int getNumPrimitives() {
@@ -438,29 +462,29 @@ public class Drawing implements IEntity<Long> {
     private void removeSurroundingPrimitives(double surroundTolDist, double surroundTolPoints) {
         ArrayList<Primitive> newListPrimitives = new ArrayList<Primitive>();
 
-        if(this.getNumPrimitives() > 0) {
+        if (this.getNumPrimitives() > 0) {
             //double preTolerance = preTol * this.getDiagonalLength();
             double maxDist = surroundTolDist * this.getDiagonalLength();
             double maxDist2Allowed = Math.pow(maxDist, 2);
 
             ArrayList<Primitive> excludePrimitives = new ArrayList<Primitive>();
 
-            for (int i=0; i<this.getNumPrimitives(); i++) {
+            for (int i = 0; i < this.getNumPrimitives(); i++) {
                 Primitive prim = this.getPrimitive(i);
                 int pointsNeeded = (int) (surroundTolPoints * this.getPrimitive(i).getNumPoints());
                 //System.out.println("i =" + i);
-                for (int j=i+1; j< this.getNumPrimitives() && j>=0; j--) {
+                for (int j = i + 1; j < this.getNumPrimitives() && j >= 0; j--) {
                     //System.out.println("j =" + j);
-                    if ((j!=i) && excludePrimitives.contains(this.getPrimitive(j))) {
-                        int pointsNeededJ = (int)(surroundTolPoints * this.getPrimitive(j).getNumPoints());
+                    if ((j != i) && excludePrimitives.contains(this.getPrimitive(j))) {
+                        int pointsNeededJ = (int) (surroundTolPoints * this.getPrimitive(j).getNumPoints());
                         int pointsInRange = 0;
 
                         //loops through all points of i and j and removes add removes polygon i when
                         //all points of polygon j are less far from any point of i then max_dist, i!=j
-                        for(int k=0; k<prim.getNumPoints(); k++) {
+                        for (int k = 0; k < prim.getNumPoints(); k++) {
                             Point pointI = prim.getPoint(k);
 
-                            for(int l=0; l<this.getPrimitive(j).getNumPoints(); l++){
+                            for (int l = 0; l < this.getPrimitive(j).getNumPoints(); l++) {
                                 Point pointJ = prim.getPoint(l);
                                 double dx = pointI.getX() - pointJ.getX();
                                 double dy = pointI.getY() - pointJ.getY();
@@ -483,7 +507,7 @@ public class Drawing implements IEntity<Long> {
                                 //color polygon combining)
                                 if (!(this.getPrimitive(j).isClosed())) {
                                     //combine bordercolors if needed
-                                    if(!this.getPrimitive(i).getBorderColor().isSet()) {
+                                    if (!this.getPrimitive(i).getBorderColor().isSet()) {
                                         this.getPrimitive(i).setBorderColor(new Color(this.getPrimitive(j).getBorderColor(),
                                                 this.getPrimitive(j).getBorderColor().isSet()));
                                     }
@@ -495,18 +519,18 @@ public class Drawing implements IEntity<Long> {
                             //combine colors if needed
                             if (!this.getPrimitive(j).getBorderColor().isSet()) {
                                 this.getPrimitive(j).setBorderColor(new Color(this.getPrimitive(i).getBorderColor(),
-                                                this.getPrimitive(i).getBorderColor().isSet()));
+                                        this.getPrimitive(i).getBorderColor().isSet()));
                             }
                             if (this.getPrimitive(j).isClosed() && !this.getPrimitive(j).getFillColor().isSet()) {
                                 this.getPrimitive(j).setFillColor(new Color(this.getPrimitive(i).getFillColor(),
-                                                this.getPrimitive(i).getFillColor().isSet()));
+                                        this.getPrimitive(i).getFillColor().isSet()));
                             }
                             //if the one you keep isn't a polygon(but a polyline), BUT the one you exclude is
                             else if (this.getPrimitive(i).isClosed() && !this.getPrimitive(i).getFillColor().isSet()) {
                                 //then exclude the outer polyline, and keep the inner polygon
                                 if (!this.getPrimitive(i).getBorderColor().isSet()) {
                                     this.getPrimitive(i).setBorderColor(new Color(this.getPrimitive(j).getBorderColor(),
-                                                this.getPrimitive(j).getBorderColor().isSet()));
+                                            this.getPrimitive(j).getBorderColor().isSet()));
                                 }
                                 excludePrimitives.add(this.getPrimitive(j));
                                 break;
@@ -521,7 +545,7 @@ public class Drawing implements IEntity<Long> {
             for (int m = 0; m < this.getNumPrimitives(); m++) {
                 Primitive prim = this.getPrimitive(m);
                 if (!(excludePrimitives.contains(prim))) {
-                    prim.setId(new Long(this.getNumPrimitives()+1));
+                    prim.setId(new Long(this.getNumPrimitives() + 1));
                     newListPrimitives.add(prim);
                 }
             }
@@ -530,14 +554,15 @@ public class Drawing implements IEntity<Long> {
     }
 
 
-    /** Concatenates primitives with similar fill-color, and cuts-out primitives
+    /**
+     * Concatenates primitives with similar fill-color, and cuts-out primitives
      * with different colors or borders reducing primitive count by placing
      * primitives in an exclude list, when its vertices are added to another
      * primitive
      */
     private void colorConcatPrimitives(double preTol, double overTol,
-        int maxCountOptimize, int maxVertices,
-        double hueTol, double satTol, double intTol) {
+                                       int maxCountOptimize, int maxVertices,
+                                       double hueTol, double satTol, double intTol) {
         ArrayList<Primitive> newListPrimitives = new ArrayList<Primitive>();
         float[] hsv1 = new float[3];
         float[] hsv2 = new float[3];
@@ -552,10 +577,10 @@ public class Drawing implements IEntity<Long> {
             int countOptimize = 0;
 
             //search for a primitive which overlaps an already drawn primitive
-            for (int i=0; i< this.getNumPrimitives(); i++){
+            for (int i = 0; i < this.getNumPrimitives(); i++) {
                 prim1 = this.getPrimitive(i);
 
-                if(prim1.getNumPoints() == 0) {
+                if (prim1.getNumPoints() == 0) {
                     prim1.setBorderColor(new Color(0, 0, 0, 0, false));
                     prim1.setFillColor(new Color(0, 0, 0, 0, false));
                 }
@@ -563,12 +588,12 @@ public class Drawing implements IEntity<Long> {
                 //this is possible when there are objects inserted after a clipping operation
                 if (prim1.getBorderColor().isSet() || prim1.getFillColor().isSet()) {
                     //get already drawn primitives (backwards)
-                    for (int j=i-1; j>=0; j--) {
+                    for (int j = i - 1; j >= 0; j--) {
                         prim2 = this.getPrimitive(j);
 
                         if (prim2.getNumPoints() == 0) {
-                            prim2.setBorderColor(new Color(0,0,0,0, false));
-                            prim2.setFillColor(new Color(0,0,0,0, false));
+                            prim2.setBorderColor(new Color(0, 0, 0, 0, false));
+                            prim2.setFillColor(new Color(0, 0, 0, 0, false));
                         }
 
                         //skip test with primitives, which are already excluded
@@ -577,7 +602,7 @@ public class Drawing implements IEntity<Long> {
 
                             //boundingbox test (if the bounding boxes don't collide, then we don't
                             //have to look at the vertices)
-                            if (prim1!=prim2 && prim1.collide(prim2)) {
+                            if (prim1 != prim2 && prim1.collide(prim2)) {
                                 //first case: two polygons // lines do still nothing
                                 if (prim1.isClosed() && prim2.isClosed()) {
                                     //color tests to eventually combine and exclude j (inner primitive)
@@ -627,22 +652,22 @@ public class Drawing implements IEntity<Long> {
                                                 hsv2);
                                         //test if color is within range AND there is no border
                                         if (!prim1.getBorderColor().isSet() && !prim2.getBorderColor().isSet() &&
-                                                Math.abs(hsv1[0] - hsv2[0])*360 < hueTol &&
+                                                Math.abs(hsv1[0] - hsv2[0]) * 360 < hueTol &&
                                                 Math.abs(hsv1[1] - hsv2[1]) < satTol &&
                                                 Math.abs(hsv1[2] - hsv2[2]) < intTol) {
 
                                             int insertedPrimitives = mergePrimitives(prim1, prim2);
                                             if (insertedPrimitives > 0) {
-                                               numberToBeRemoved += 2;
+                                                numberToBeRemoved += 2;
 
-                                               //set original primitives transparent, to excluded them
-                                               prim1.setBorderColor(new Color(prim1.getBorderColor(),false));
-                                               prim1.setFillColor(new Color(prim1.getFillColor(), false));
-                                               prim2.setBorderColor(new Color(prim2.getBorderColor(),false));
-                                               prim2.setFillColor(new Color(prim2.getFillColor(),false));
+                                                //set original primitives transparent, to excluded them
+                                                prim1.setBorderColor(new Color(prim1.getBorderColor(), false));
+                                                prim1.setFillColor(new Color(prim1.getFillColor(), false));
+                                                prim2.setBorderColor(new Color(prim2.getBorderColor(), false));
+                                                prim2.setFillColor(new Color(prim2.getFillColor(), false));
 
-                                               //update p_i to union of i and j
-                                               prim1 = this.getPrimitive(i);
+                                                //update p_i to union of i and j
+                                                prim1 = this.getPrimitive(i);
                                             }
 
                                         }
@@ -698,7 +723,7 @@ public class Drawing implements IEntity<Long> {
                 }
             }
             //creating new drawing, without primitives which are in the exclude-list
-            for (int j=0;j<this.getNumPrimitives(); j++) {
+            for (int j = 0; j < this.getNumPrimitives(); j++) {
                 Primitive currPrimitive = this.getPrimitive(j);
                 if (currPrimitive.getBorderColor().isSet() || currPrimitive.getFillColor().isSet()) {
                     newListPrimitives.add(currPrimitive);
@@ -710,10 +735,9 @@ public class Drawing implements IEntity<Long> {
 
     /**
      * Calculates the difference between two primitives
-     *
      */
     public int diffPrimitives(Primitive prim1, Primitive prim2) {
-                //make sure that the first primitive actually comes first
+        //make sure that the first primitive actually comes first
         Primitive p_i = prim1, p_j = prim2;
         if (!(prim1.getId() < prim2.getId())) {
             p_i = prim2;
@@ -754,32 +778,32 @@ public class Drawing implements IEntity<Long> {
 
         if (newPrimitives != 0) {
             Primitive p_new;
-            boolean foundHole=false;
+            boolean foundHole = false;
 
             //create and add new primitives from result
-            for (int j=0; j<newPrimitives; j++) {
+            for (int j = 0; j < newPrimitives; j++) {
                 //set the new object if it isn't a hole
-                boolean isHole=(result.getNumInnerPoly()>1)?false:result.isHole();
+                boolean isHole = (result.getNumInnerPoly() > 1) ? false : result.isHole();
 
-                if(!isHole) { //if (int_array.frompointer(result.getHole()).getitem(j) == 0) {
+                if (!isHole) { //if (int_array.frompointer(result.getHole()).getitem(j) == 0) {
                     //create a new primitive which contains the result and insert it at the bottom
                     p_new = this.insertNewPrimitive(this.primitives.indexOf(p_j));//pr_j + insertedNewPrimitives);
                     insertedNewPrimitives++;
-                    assert(p_new!=null);
+                    assert (p_new != null);
 
                     //when creating (a) new primitive(s), let it contain all primitives that p_j contained (doesn't matter that this isn't always true, it is used to reset the height of the contained objects)
 
-                    p_new.setBorderColor(new Color(t2b.getRed(),t2b.getGreen(),t2b.getBlue(),t2b.getAlpha(), t2b.isSet()));
-                    p_new.setFillColor(new Color(t2f.getRed(),t2f.getGreen(),t2f.getBlue(),t2f.getAlpha(), t2f.isSet()));
+                    p_new.setBorderColor(new Color(t2b.getRed(), t2b.getGreen(), t2b.getBlue(), t2b.getAlpha(), t2b.isSet()));
+                    p_new.setFillColor(new Color(t2f.getRed(), t2f.getGreen(), t2f.getBlue(), t2f.getAlpha(), t2f.isSet()));
 
                     //create the polygon
-                    for(int i=0; i<result.getNumPoints(); i++) {
+                    for (int i = 0; i < result.getNumPoints(); i++) {
                         //gpc_vertex vertex=gpc_vertex_array.frompointer(contour.getVertex()).getitem(i);
-                        p_new.addPoint(result.getX(i),result.getY(i));
+                        p_new.addPoint(result.getX(i), result.getY(i));
                     }
                     if (result.getNumPoints() != 0) {
                         //gpc_vertex vertex=gpc_vertex_array.frompointer(contour.getVertex()).getitem(0);
-                        p_new.addPoint(result.getX(0),result.getY(0));
+                        p_new.addPoint(result.getX(0), result.getY(0));
                     }
 
                     //confirm it's a polygon
@@ -788,21 +812,21 @@ public class Drawing implements IEntity<Long> {
                     //if it is a hole
                     foundHole = true;
 
-                    p_new = this.insertNewPrimitive(this.primitives.indexOf(p_j) + insertedNewPrimitives+1);
+                    p_new = this.insertNewPrimitive(this.primitives.indexOf(p_j) + insertedNewPrimitives + 1);
                     insertedNewPrimitives++;
-                    assert(p_new!=null);
+                    assert (p_new != null);
 
                     //when creating (a) new primitive(s), let it contain all primitives that p_j contained (doesn't matter that this isn't always true, it is used to reset the height of the contained objects)
 
-                    p_new.setBorderColor(new Color(t2b.getRed(),t2b.getGreen(),t2b.getBlue(),t2b.getAlpha(), t2b.isSet()));
-                    p_new.setFillColor(new Color(255,255,255,255, true));
+                    p_new.setBorderColor(new Color(t2b.getRed(), t2b.getGreen(), t2b.getBlue(), t2b.getAlpha(), t2b.isSet()));
+                    p_new.setFillColor(new Color(255, 255, 255, 255, true));
 
                     //create the polygon
-                    for(int i=0; i<result.getNumPoints(); i++) {
-                        p_new.addPoint(result.getX(i),result.getY(i));
+                    for (int i = 0; i < result.getNumPoints(); i++) {
+                        p_new.addPoint(result.getX(i), result.getY(i));
                     }
                     if (result.getNumPoints() != 0) {
-                        p_new.addPoint(result.getX(0),result.getY(0));
+                        p_new.addPoint(result.getX(0), result.getY(0));
                     }
 
                     //confirm it's a polygon
@@ -817,7 +841,6 @@ public class Drawing implements IEntity<Long> {
 
     /**
      * Merges two primitives
-     *
      */
     private int mergePrimitives(Primitive prim1, Primitive prim2) {
         //make sure that the first primitive actually comes first
@@ -865,41 +888,41 @@ public class Drawing implements IEntity<Long> {
         Primitive p_new;
 
         //create and add new primitives from result
-        for (int j = 0; j<newPrimitives; j++) {
+        for (int j = 0; j < newPrimitives; j++) {
             //if it isn't an hole, but a unified part
-            boolean isHole=(result.getNumInnerPoly()>1)?false:result.isHole();
-            if(!isHole) { //if (int_array.frompointer(result.getHole()).getitem(j) == 0) {
+            boolean isHole = (result.getNumInnerPoly() > 1) ? false : result.isHole();
+            if (!isHole) { //if (int_array.frompointer(result.getHole()).getitem(j) == 0) {
                 //create a new primitive and insert it at location of the lowest polygon
                 p_new = this.insertNewPrimitive(this.primitives.indexOf(p_j)); //pr_i
                 insertedNewPrimitives++;
-                assert(p_new!=null);
+                assert (p_new != null);
 
                 //give it the avarage fill color of the original
                 if (t2f.isSet()) {
-                    p_new.setBorderColor(new Color((t1b.getRed() + t2b.getRed()) / 2,(t1b.getGreen() + t2b.getGreen()) / 2,(t1b.getBlue() + t1b.getBlue()) /2, (t1b.getAlpha() + t2b.getAlpha())/2, t1b.isSet()));
-                    p_new.setFillColor(new Color((t1f.getRed() + t2f.getRed()) / 2,(t1f.getGreen() + t2f.getGreen()) / 2,(t1f.getBlue() + t1f.getBlue()) /2,(t1f.getAlpha()+t2f.getAlpha())/2, t1f.isSet()));
+                    p_new.setBorderColor(new Color((t1b.getRed() + t2b.getRed()) / 2, (t1b.getGreen() + t2b.getGreen()) / 2, (t1b.getBlue() + t1b.getBlue()) / 2, (t1b.getAlpha() + t2b.getAlpha()) / 2, t1b.isSet()));
+                    p_new.setFillColor(new Color((t1f.getRed() + t2f.getRed()) / 2, (t1f.getGreen() + t2f.getGreen()) / 2, (t1f.getBlue() + t1f.getBlue()) / 2, (t1f.getAlpha() + t2f.getAlpha()) / 2, t1f.isSet()));
                 } else {
-                    p_new.setBorderColor(new Color(t1b.getRed(),t1b.getGreen(),t1b.getBlue(),t1b.getAlpha(), t1b.isSet()));
-                    p_new.setFillColor(new Color(t1f.getRed(),t1f.getGreen(),t1f.getBlue(),t1f.getAlpha(), t1f.isSet()));
+                    p_new.setBorderColor(new Color(t1b.getRed(), t1b.getGreen(), t1b.getBlue(), t1b.getAlpha(), t1b.isSet()));
+                    p_new.setFillColor(new Color(t1f.getRed(), t1f.getGreen(), t1f.getBlue(), t1f.getAlpha(), t1f.isSet()));
                 }
 
             } else {
                 //when it is a hole, add it at the top and make it white
                 p_new = this.insertNewPrimitive(this.primitives.indexOf(p_i) + insertedNewPrimitives);
-                assert(p_new!=null);
+                assert (p_new != null);
 
-                p_new.setBorderColor(new Color(t1b.getRed(),t1b.getGreen(),t1b.getBlue(),t1b.getAlpha(), t1b.isSet()));
-                p_new.setFillColor(new Color(255,255,255,255, true));
+                p_new.setBorderColor(new Color(t1b.getRed(), t1b.getGreen(), t1b.getBlue(), t1b.getAlpha(), t1b.isSet()));
+                p_new.setFillColor(new Color(255, 255, 255, 255, true));
             }
 
             //create the polygon
-            for(int i=0; i<result.getNumPoints(); i++) {
+            for (int i = 0; i < result.getNumPoints(); i++) {
                 //gpc_vertex vertex=gpc_vertex_array.frompointer(contour.getVertex()).getitem(i);
-                p_new.addPoint(result.getX(i),result.getY(i));
+                p_new.addPoint(result.getX(i), result.getY(i));
             }
             if (result.getNumPoints() != 0) {
                 //gpc_vertex vertex=gpc_vertex_array.frompointer(contour.getVertex()).getitem(0);
-                p_new.addPoint(result.getX(0),result.getY(0));
+                p_new.addPoint(result.getX(0), result.getY(0));
             }
 
             //confirm it's a polygon
@@ -909,8 +932,8 @@ public class Drawing implements IEntity<Long> {
         return insertedNewPrimitives;
     }
 
-    /** Removes small primitives in the drawing
-     *
+    /**
+     * Removes small primitives in the drawing
      */
     private void removeSmallPrimitives(double areaTolerance) {
         ArrayList<Primitive> newListPrimitives = new ArrayList<Primitive>();
@@ -922,16 +945,15 @@ public class Drawing implements IEntity<Long> {
             double thresholdSize = areaTolerance * this.getArea();
 
             //optimize the drawing by removing small primitives
-	    for (int i = 0; i < size; i++) {
+            for (int i = 0; i < size; i++) {
                 Primitive p = this.getPrimitive(i);
                 // check if the primitive isn't invisible
-                if ((p.getFillColor()).isSet() || (p.getBorderColor().isSet())){
+                if ((p.getFillColor()).isSet() || (p.getBorderColor().isSet())) {
                     //add to new list, when there isn't an areaSize or when the areaSize is above the threshold
                     if ((p.getAreaSize() == -1) || (p.getAreaSize() > thresholdSize)) {
-                        p.setId(new Long(newListPrimitives.size()+1));
+                        p.setId(new Long(newListPrimitives.size() + 1));
                         newListPrimitives.add(p);
-                    }
-                    else {
+                    } else {
                         newListPrimitives.remove(p);
                     }
                 }
@@ -941,7 +963,8 @@ public class Drawing implements IEntity<Long> {
         }
     }
 
-    /** Remove vertices from all primitives, which distance between each other are too small
+    /**
+     * Remove vertices from all primitives, which distance between each other are too small
      * if 2 edges are left and the distance between each other is to small too,
      * then the whole primitive is removed
      */
@@ -952,25 +975,24 @@ public class Drawing implements IEntity<Long> {
         ArrayList<Point> matchArray = new ArrayList<Point>();
         int drawingSize = this.getNumPrimitives();
 
-        if (drawingSize != 0){
+        if (drawingSize != 0) {
 
             double relativeTolerance = v_tolerance * this.getDiagonalLength();
             double relMinLength = l_tolerance * this.getDiagonalLength();
             Primitive p = new Primitive();
 
             //optimize all primitives by removing some small primitives and small lines withing primitives
-            for (int i=0; i < drawingSize; i++) {
+            for (int i = 0; i < drawingSize; i++) {
                 p = this.getPrimitive(i);
                 indexLast = p.getNumPoints() - 1;
                 p.polySimplify(relativeTolerance);
 
                 //add to new list, when there are still points left and in case of lines, the total length of a line still is bigger then the threshold
-                if (p.getNumPoints() > 0 ) {
-                    if (p.isClosed() || (p.getPerimeter() > relMinLength) ) {
+                if (p.getNumPoints() > 0) {
+                    if (p.isClosed() || (p.getPerimeter() > relMinLength)) {
                         p.setId(new Long(newListPrimitives.size() + 1));
                         newListPrimitives.add(p);
-                    }
-                    else {
+                    } else {
                         newListPrimitives.remove(p);
                     }
                 }
@@ -982,18 +1004,19 @@ public class Drawing implements IEntity<Long> {
 
     /**
      * Returns a string representation of the drawing.
+     *
      * @return a string representation of the drawing.
      */
     @Override
-    public String toString(){
+    public String toString() {
         StringBuilder stringBuffer = new StringBuilder();
         Primitive p;
         stringBuffer.append("Drawing with id: ").append(id).append(System.getProperty("line.separator"));
-	for (int i = 0; i < primitives.size(); i++) {
-		p = primitives.get(i);
-                stringBuffer.append(p.toString()).append(System.getProperty("line.separator"));
-	}
-	return stringBuffer.toString();
+        for (int i = 0; i < primitives.size(); i++) {
+            p = primitives.get(i);
+            stringBuffer.append(p.toString()).append(System.getProperty("line.separator"));
+        }
+        return stringBuffer.toString();
     }
 
     /**
@@ -1001,37 +1024,6 @@ public class Drawing implements IEntity<Long> {
      * @throws IOException
      */
     public void export(String path) throws IOException {
-        /*double preferredWidth = 640;
-        double preferredHeight = 640;
-
-        double dw = getWidth();
-        double dh = getHeight();
-        if (dw <= 0) dw = 1;
-        if (dh <= 0) dh = 1;
-        double pw = preferredWidth;
-        double ph = preferredHeight;
-        boolean isLandscape = (dw >= dh ? true : false);
-        double xlim;
-        double ylim;
-        if (isLandscape) {
-            xlim = pw; //(dw > pw ? pw : dw);
-            ylim = xlim * (dh/dw);
-        } else {
-            ylim = ph; //(dh > ph ? ph : dh);
-            xlim = ylim * (dw/dh);
-        }
-
-        double xratio = xlim/dw;
-        double yratio = ylim/dh;
-
-        BufferedImage bi = new BufferedImage((int)xlim, (int)ylim, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D ig2 = bi.createGraphics();
-        draw(ig2, xratio, yratio);         */
-        BufferedImage bi = getImage();
-        ImageIO.write(bi, "PNG", new File(path + ".png"));
-    }
-
-    public BufferedImage getImage() throws IOException {
         double preferredWidth = 640;
         double preferredHeight = 640;
 
@@ -1046,23 +1038,83 @@ public class Drawing implements IEntity<Long> {
         double ylim;
         if (isLandscape) {
             xlim = pw; //(dw > pw ? pw : dw);
-            ylim = xlim * (dh/dw);
+            ylim = xlim * (dh / dw);
         } else {
             ylim = ph; //(dh > ph ? ph : dh);
-            xlim = ylim * (dw/dh);
+            xlim = ylim * (dw / dh);
         }
 
-        double xratio = xlim/dw;
-        double yratio = ylim/dh;
+        double xratio = xlim / dw;
+        double yratio = ylim / dh;
 
-        BufferedImage bi = new BufferedImage((int)xlim, (int)ylim, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage bi = new BufferedImage((int) xlim, (int) ylim, BufferedImage.TYPE_INT_ARGB);
         Graphics2D ig2 = bi.createGraphics();
         draw(ig2, xratio, yratio);
-        return bi;
+//        BufferedImage bi = getImage();
+        ImageIO.write(bi, "PNG", new File(path + ".png"));
+    }
+
+    /**
+     * An image transcoder that stores the resulting image.
+     */
+    protected class Rasterizer extends ImageTranscoder {
+
+        private BufferedImage _img;
+
+        public BufferedImage getImage() {
+            return _img;
+        }
+
+        public BufferedImage createImage(int w, int h) {
+            return new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        }
+
+        public void writeImage(BufferedImage img, TranscoderOutput output)
+                throws TranscoderException {
+            _img = img;
+        }
+    }
+
+    public BufferedImage getImage() throws IOException {
+        try {
+            double preferredWidth = 640;
+            double preferredHeight = 640;
+
+            double dw = getWidth();
+            double dh = getHeight();
+            if (dw <= 0) dw = 1;
+            if (dh <= 0) dh = 1;
+            double pw = preferredWidth;
+            double ph = preferredHeight;
+            boolean isLandscape = (dw >= dh ? true : false);
+            double xlim;
+            double ylim;
+            if (isLandscape) {
+                xlim = pw; //(dw > pw ? pw : dw);
+                ylim = xlim * (dh / dw);
+            } else {
+                ylim = ph; //(dh > ph ? ph : dh);
+                xlim = ylim * (dw / dh);
+            }
+
+            TranscoderInput input = new TranscoderInput(document);
+            Rasterizer r = new Rasterizer();
+            r.addTranscodingHint(ImageTranscoder.KEY_WIDTH, new Float(xlim));
+            r.addTranscodingHint(ImageTranscoder.KEY_HEIGHT, new Float(ylim));
+            r.addTranscodingHint(ImageTranscoder.KEY_BACKGROUND_COLOR, java.awt.Color.WHITE);
+            r.transcode(input, null);
+
+            return r.getImage();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     /**
      * TODO Gabe: documentar
+     *
      * @param g2d
      * @param xratio
      * @param yratio
@@ -1083,18 +1135,19 @@ public class Drawing implements IEntity<Long> {
             if (primitive.isClosed()) { // it's a polygon
                 polygon = new Polygon();
                 for (Point point : primitive.getPoints()) {
-                    polygon.addPoint((int) ((point.getX() - xmin) * xratio) , (int) ((point.getY() - ymin) * yratio));
+                    polygon.addPoint((int) ((point.getX() - xmin) * xratio), (int) ((point.getY() - ymin) * yratio));
                 }
                 g2d.setColor(new java.awt.Color(fill.getRed(), fill.getGreen(), fill.getBlue()));
-                alpha = (float) fill.getAlpha() / 255.0f;
+                alpha = (float) fill.getAlpha();
+//                alpha = (float) fill.getAlpha() / 255.0f;
                 g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
                 g2d.fillPolygon(polygon);
-                alpha = (float) stroke.getAlpha() / 255.0f;
+                alpha = (float) stroke.getAlpha();
+//                alpha = (float) stroke.getAlpha() / 255.0f;
                 g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
                 g2d.setColor(new java.awt.Color(stroke.getRed(), stroke.getGreen(), stroke.getBlue()));
                 g2d.drawPolygon(polygon);
-            }
-            else { // it's a polyline
+            } else { // it's a polyline
                 ArrayList<Point> points = primitive.getPoints();
                 int len = points.size();
                 Point point;
@@ -1102,8 +1155,8 @@ public class Drawing implements IEntity<Long> {
                 int[] ypoints = new int[len];
                 for (int i = 0; i < len; i++) {
                     point = points.get(i);
-                    xpoints[i] = (int)((point.getX() - xmin) * xratio);
-                    ypoints[i] = (int)((point.getY() - ymin) * yratio);
+                    xpoints[i] = (int) ((point.getX() - xmin) * xratio);
+                    ypoints[i] = (int) ((point.getY() - ymin) * yratio);
                 }
                 Polygon p = new Polygon(xpoints, ypoints, len);
                 g2d.setColor(new java.awt.Color(fill.getRed(), fill.getGreen(), fill.getBlue()));
@@ -1127,5 +1180,21 @@ public class Drawing implements IEntity<Long> {
             newPrims.add(prim.clone());
         drawing.setPrimitives(newPrims);
         return drawing;
+    }
+
+    public String getFilename() {
+        return filename;
+    }
+
+    public void setFilename(String filename) {
+        this.filename = filename;
+    }
+
+    protected SVGDocument getDocument() {
+        return document;
+    }
+
+    protected void setDocument(SVGDocument document) {
+        this.document = document;
     }
 }

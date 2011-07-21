@@ -33,6 +33,7 @@ import java.util.regex.Pattern;
 
 /**
  * Represents a class responsible for instanciating drawing objects.
+ *
  * @author Gabriel
  */
 public class DrawingFactory {
@@ -53,6 +54,7 @@ public class DrawingFactory {
 
     /**
      * Returns true if the drawing should be simplified, false otherwise.
+     *
      * @return true if the drawing should be simplified, false otherwise.
      */
     public boolean isSimplified() {
@@ -61,6 +63,7 @@ public class DrawingFactory {
 
     /**
      * Sets whether the new drawing should be simplified or not.
+     *
      * @param useSimplify true if the new drawing should be simplified, false otherwise.
      */
     public void setSimplified(boolean useSimplify) {
@@ -69,6 +72,7 @@ public class DrawingFactory {
 
     /**
      * Returns the number of segments in which a bezier curve should be segmented.
+     *
      * @return the number of segments in which a bezier curve should be segmented.
      */
     public int getCurveSegmentation() {
@@ -77,6 +81,7 @@ public class DrawingFactory {
 
     /**
      * Sets the number of segments in which a bezier curve should be segmented.
+     *
      * @param n the number of segments in which a bezier curve should be segmented.
      */
     public void setCurveSegmentation(int n) {
@@ -85,6 +90,7 @@ public class DrawingFactory {
 
     /**
      * Returns current simplification settings.
+     *
      * @return the simplification settings.
      */
     public Simplification getSimplification() {
@@ -93,6 +99,7 @@ public class DrawingFactory {
 
     /**
      * Sets the simplification settings.
+     *
      * @param simplification the simplification settings to be set.
      */
     public void setSimplification(Simplification simplification) {
@@ -101,6 +108,7 @@ public class DrawingFactory {
 
     /**
      * Returns the singleton object of this class.
+     *
      * @return the singleton object of this class.
      */
     public static DrawingFactory getInstance() {
@@ -108,7 +116,8 @@ public class DrawingFactory {
     }
 
     private DrawingFactory() {
-        simplified = false;
+        simplified = true;
+//        simplified = false;
         count = 0;
         CURVE_SEGMENTATION = 24;
         //findDpath = Pattern.compile("^[ \t]+d=\"");
@@ -124,6 +133,7 @@ public class DrawingFactory {
 
     /**
      * Returns a new Drawing object from the supplied SVG file.
+     *
      * @param filePath the path to the SVG source file.
      * @return the drawing.
      */
@@ -142,11 +152,14 @@ public class DrawingFactory {
 //        try {
 //            uri = new URI("file:///" + filePath.replace("\\", "/"));
 //        } catch (Exception e) { }
-        return drawingFromBatik(filePath);
+        Drawing drawing = drawingFromBatik(filePath);
+        drawing.setFilename(filePath);
+        return drawing;
     }
 
     /**
      * Generates a drawing from the supplied svg path, using batik.
+     *
      * @param filePath the path to the SVG source file.
      * @return the generated drawing.
      * @throws IOException
@@ -163,11 +176,11 @@ public class DrawingFactory {
 
         // boot the CSS engine to get Batik to compute the CSS
         UserAgentAdapter userAgent = new UserAgentAdapter();
-        DocumentLoader loader    = new DocumentLoader(userAgent);
-        BridgeContext ctx       = new BridgeContext(userAgent, loader);
+        DocumentLoader loader = new DocumentLoader(userAgent);
+        BridgeContext ctx = new BridgeContext(userAgent, loader);
         ctx.setDynamicState(BridgeContext.DYNAMIC);
-        GVTBuilder builder   = new GVTBuilder();
-        GraphicsNode rootGN    = builder.build(ctx, doc);
+        GVTBuilder builder = new GVTBuilder();
+        GraphicsNode rootGN = builder.build(ctx, doc);
 
         // parse elements
         SVGElement root = doc.getRootElement();
@@ -200,8 +213,31 @@ public class DrawingFactory {
         loader.dispose();
         ctx.dispose();
 
+        drawing.setDocument(doc);
+
         return drawing;
     }
+
+    //    public BufferedImage getImage(int bitmap_resolution)
+//    {
+//        try {
+//            TranscoderInput input = new TranscoderInput(_document);
+//            Rasterizer r = new Rasterizer();
+//            r.addTranscodingHint(ImageTranscoder.KEY_WIDTH, new Float(bitmap_resolution));
+//            r.addTranscodingHint(ImageTranscoder.KEY_HEIGHT, new Float(bitmap_resolution));
+//            r.addTranscodingHint(ImageTranscoder.KEY_BACKGROUND_COLOR, java.awt.Color.WHITE);
+//            r.transcode(input,null);
+//
+//            return r.getImage();
+//
+//        } catch (Exception e) {
+//
+//            log.log(Level.WARNING,"Error rasterizing!\n.",e);
+//        }
+//
+//
+//        return null;
+//    }
 
     private ArrayList<Primitive> walkSvg(SVGElement root) {
         //SVGMatrix mat = new SVGOMMatrix(AffineTransform.getScaleInstance(1.0, 1.0)); // identity matrix
@@ -234,13 +270,11 @@ public class DrawingFactory {
             n = elements.item(i);
             if (n.getParentNode() == node) {
                 if (n.getNodeName().equals(SVGConstants.SVG_G_TAG)) {
-                    primitives.addAll(walkG(root, (SVGGElement)n, depth));
-                }
-                else if (n.getNodeName().equals(SVGConstants.SVG_PATH_TAG)) {
-                    primitives.addAll(walkPath(root, (SVGOMPathElement)n, depth+1));
-                }
-                else if (n.getNodeName().equals(SVGConstants.SVG_RECT_TAG)) {
-                    primitives.addAll(walkRect(root, (SVGOMRectElement)n, depth+1));
+                    primitives.addAll(walkG(root, (SVGGElement) n, depth));
+                } else if (n.getNodeName().equals(SVGConstants.SVG_PATH_TAG)) {
+                    primitives.addAll(walkPath(root, (SVGOMPathElement) n, depth + 1));
+                } else if (n.getNodeName().equals(SVGConstants.SVG_RECT_TAG)) {
+                    primitives.addAll(walkRect(root, (SVGOMRectElement) n, depth + 1));
                 }
             }
         }
@@ -319,8 +353,7 @@ public class DrawingFactory {
         SVGPathSeg seg;
         SVGPoint firstPoint = null;
         SVGPoint lastPoint = null;
-        for (int i = 0; i < len; i++)
-        {
+        for (int i = 0; i < len; i++) {
             seg = list.getItem(i);
             if (seg.getPathSegType() == SVGPathSeg.PATHSEG_MOVETO_ABS) {
                 SVGPathSegMovetoAbs M = (SVGPathSegMovetoAbs) seg;
@@ -329,16 +362,14 @@ public class DrawingFactory {
                 if (firstPoint == null)
                     firstPoint = lastPoint;
                 primitive.addPoint(lastPoint.getX(), lastPoint.getY());
-            }
-            else if (seg.getPathSegType() == SVGPathSeg.PATHSEG_LINETO_ABS) {
+            } else if (seg.getPathSegType() == SVGPathSeg.PATHSEG_LINETO_ABS) {
                 SVGPathSegLinetoAbs L = (SVGPathSegLinetoAbs) seg;
                 lastPoint = new SVGOMPoint(L.getX(), L.getY());
                 lastPoint = transformPoint(lastPoint, mat);
                 if (firstPoint == null)
                     firstPoint = lastPoint;
                 primitive.addPoint(lastPoint.getX(), lastPoint.getY());
-            }
-            else if(seg.getPathSegType() == SVGPathSeg.PATHSEG_CURVETO_CUBIC_ABS) {
+            } else if (seg.getPathSegType() == SVGPathSeg.PATHSEG_CURVETO_CUBIC_ABS) {
                 SVGPathSegCurvetoCubicAbs C = (SVGPathSegCurvetoCubicAbs) seg;
                 SVGPoint P0 = new SVGOMPoint(lastPoint.getX(), lastPoint.getY());
                 SVGPoint P1 = new SVGOMPoint(C.getX1(), C.getY1());
@@ -358,7 +389,7 @@ public class DrawingFactory {
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
-                for(Point p : points) {
+                for (Point p : points) {
                     primitive.addPoint(p.getX(), p.getY());
                 }
 
@@ -367,14 +398,13 @@ public class DrawingFactory {
                 lastPoint.setY(P3.getY());
                 if (firstPoint == null)
                     firstPoint = lastPoint;
-            }
-            else if (seg.getPathSegType() == SVGPathSeg.PATHSEG_CLOSEPATH) {
+            } else if (seg.getPathSegType() == SVGPathSeg.PATHSEG_CLOSEPATH) {
 //                if (firstPoint != lastPoint)
 //                    primitive.addPoint(firstPoint.getX(), firstPoint.getY());
 
                 // color and border extraction
                 setSVGElementProperties(path, primitive);
-                
+
 //                for (Primitive lp : primitives) {
 //                    if (primitive.isInsidePrimitive(lp))
 //                        primitive.setFillColor(new Color(0,0,0,0));
@@ -396,7 +426,7 @@ public class DrawingFactory {
 
         // add the new primitive and the primitives created from this node's children
         primitives.addAll(walkElement(root, path, depth));
-        
+
         return primitives;
     }
 
@@ -441,23 +471,21 @@ public class DrawingFactory {
         RGBColorValue tempColor;
 
         opacity = (opacityV == null || opacityV == ValueConstants.NONE_VALUE ? 255 :
-                        (int) (opacityV.getFloatValue() * 255.0f));
+                (int) (opacityV.getFloatValue() * 255.0f));
         fillOpacity = (fillOpacityV == null || fillOpacityV == ValueConstants.NONE_VALUE ? opacity :
-                        (int) (fillOpacityV.getFloatValue() * opacity));
+                (int) (fillOpacityV.getFloatValue() * opacity));
         strokeWidth = (strokeWidthV == null || strokeWidthV == ValueConstants.NONE_VALUE ? 1 :
-                        (int) strokeWidthV.getFloatValue());
+                (int) strokeWidthV.getFloatValue());
         strokeOpacity = (strokeOpacityV == null || strokeOpacityV == ValueConstants.NONE_VALUE ? opacity :
-                        (int) (strokeOpacityV.getFloatValue() * opacity));
+                (int) (strokeOpacityV.getFloatValue() * opacity));
 
         if (fillV == null || fillV == ValueConstants.NONE_VALUE) {
-            fill = new Color(0,0,0,0);
-        }
-        else if(fillV instanceof RGBColorValue) {
+            fill = new Color(0, 0, 0, 0);
+        } else if (fillV instanceof RGBColorValue) {
             tempColor = (RGBColorValue) fillV;
             fill = new Color((int) tempColor.getRed().getFloatValue(), (int) tempColor.getGreen().getFloatValue(), (int) tempColor.getBlue().getFloatValue(), fillOpacity);
-        }
-        else if (fillV instanceof ComputedValue) {
-            ComputedValue cv = (ComputedValue)fillV;
+        } else if (fillV instanceof ComputedValue) {
+            ComputedValue cv = (ComputedValue) fillV;
             if ((Value) cv instanceof RGBColorValue) {
                 tempColor = (RGBColorValue) cv.getComputedValue();
                 fill = new Color((int) tempColor.getRed().getFloatValue(), (int) tempColor.getGreen().getFloatValue(), (int) tempColor.getBlue().getFloatValue(), fillOpacity);
@@ -466,13 +494,11 @@ public class DrawingFactory {
         if (strokeV == null || strokeV == ValueConstants.NONE_VALUE) {
             strokeWidth = 0;
             stroke = fill;
-        }
-        else if (strokeV instanceof RGBColorValue) {
+        } else if (strokeV instanceof RGBColorValue) {
             tempColor = (RGBColorValue) strokeV;
             stroke = new Color((int) tempColor.getRed().getFloatValue(), (int) tempColor.getGreen().getFloatValue(), (int) tempColor.getBlue().getFloatValue(), strokeOpacity);
-        }
-        else if (strokeV instanceof ComputedValue) {
-            ComputedValue cv = (ComputedValue)strokeV;
+        } else if (strokeV instanceof ComputedValue) {
+            ComputedValue cv = (ComputedValue) strokeV;
             if ((Value) cv instanceof RGBColorValue) {
                 tempColor = (RGBColorValue) cv.getComputedValue();
                 fill = new Color((int) tempColor.getRed().getFloatValue(), (int) tempColor.getGreen().getFloatValue(), (int) tempColor.getBlue().getFloatValue(), fillOpacity);
@@ -486,6 +512,7 @@ public class DrawingFactory {
 
     /**
      * Returns a new Drawing object from the supplied SVG file.
+     *
      * @param fileContent content of the SVG source file.
      * @return the drawing.
      */
@@ -497,30 +524,30 @@ public class DrawingFactory {
         // fazer mais uso das tags do SVG. A cor, por exemplo.
         Drawing drawing = new Drawing(count++);
 
-	int pathBegin,dTagBegin;
-	String dpath, path;
-	int end=0;
-	// while can find "<path"
-	while ((pathBegin = fileContent.indexOf("<path",end)) != -1) {
+        int pathBegin, dTagBegin;
+        String dpath, path;
+        int end = 0;
+        // while can find "<path"
+        while ((pathBegin = fileContent.indexOf("<path", end)) != -1) {
             // search d="
-            dTagBegin = fileContent.indexOf(" d=\"",pathBegin);
+            dTagBegin = fileContent.indexOf(" d=\"", pathBegin);
             // if not found, next loop
             if (dTagBegin == -1)
                 continue;
             // search '>'
-            end = fileContent.indexOf('>',dTagBegin);
+            end = fileContent.indexOf('>', dTagBegin);
             // if not found, next loop
             if (end == -1)
                 continue;
             // if the d=" was before the '>', do things
-            if (dTagBegin<end) {
+            if (dTagBegin < end) {
                 // find closing-"
                 path = fileContent.substring(pathBegin, end);
-                end = fileContent.indexOf('\"',dTagBegin+4);
+                end = fileContent.indexOf('\"', dTagBegin + 4);
                 if (end == -1)
                     continue;
                 // now the dpath is between the d=" and the "
-                dpath = fileContent.substring(dTagBegin+4,end);
+                dpath = fileContent.substring(dTagBegin + 4, end);
                 // add it to the sketch
                 //			cout << "path found ..." << endl;
                 //Primitive prim = readPrimitive(dpath);
@@ -542,15 +569,15 @@ public class DrawingFactory {
                 if (primitive.getNumPoints() > 1) {
                     // cout << "path added" << endl;
                     // cout << drawing->getAllPrimitives()->size() << endl;
-                    primitive.setBorderColor(new Color(0,0,0, 1));  //BLACK color
+                    primitive.setBorderColor(new Color(0, 0, 0, 1));  //BLACK color
                     drawing.addPrimitive(primitive);
                     // cout << drawing->getAllPrimitives()->size() << endl;
                 } else {
                     System.err.println("path empty");
                 }
             }
-	}
-        double x,y,width,height;
+        }
+        double x, y, width, height;
         end = 0;
 
         while ((pathBegin = fileContent.indexOf("<rect", end)) != -1) {
@@ -574,7 +601,7 @@ public class DrawingFactory {
             if (primitive.getNumPoints() > 1) {
                 // cout << "path added" << endl;
                 // cout << drawing->getAllPrimitives()->size() << endl;
-                primitive.setBorderColor(new Color(new Color(0,0,0, 1))); // BLACK color for now TODO falta a cor???
+                primitive.setBorderColor(new Color(new Color(0, 0, 0, 1))); // BLACK color for now TODO falta a cor???
                 drawing.addPrimitive(primitive);
                 // cout << drawing->getAllPrimitives()->size() << endl;
             } else {
@@ -585,11 +612,13 @@ public class DrawingFactory {
         if (this.simplified)
             drawing.simplify(simplification);
 //            drawing.simplify();
-	return drawing;
+
+        return drawing;
     }
 
     /**
      * Converts a dpath from a SVG file to a primitive.
+     *
      * @param dpath dpath from the SVG file.
      * @return the new primitive.
      */
@@ -627,73 +656,92 @@ public class DrawingFactory {
 	 * a (relative)	elliptical arc	(rx ry x-axis-rotation large-arc-flag sweep-flag x y)+
 	 */
 
-	int i = 0;
-	char chars[] = dpath.toCharArray();
+        int i = 0;
+        char chars[] = dpath.toCharArray();
 //	cout << "path: " << chars << endl;
 
-	char prevc = 'M';
-	double prevx = 0;
-	double prevy = 0;
-	int argc = 0;
+        char prevc = 'M';
+        double prevx = 0;
+        double prevy = 0;
+        int argc = 0;
 
-	String num;
-	double x=0;
-	double y=0;
+        String num;
+        double x = 0;
+        double y = 0;
 
-	Primitive prim = new Primitive();
+        Primitive prim = new Primitive();
 
-	char n;
+        char n;
 
-	// Read next command c
-	char c = chars[i];
-	while (c != 0) {
-            while (c== ' ' || c == '\t' || c == '\n') {
-                    c = chars[++i];
-                    if (c == 0)
-                        return prim;
+        // Read next command c
+        char c = chars[i];
+        while (c != 0) {
+            while (c == ' ' || c == '\t' || c == '\n') {
+                c = chars[++i];
+                if (c == 0)
+                    return prim;
             }
 
             if (c >= '0' && c <= '9') {
-                    i--;
-                    c = prevc;
+                i--;
+                c = prevc;
             }
 //		cout << "Command found: " << c << endl;
             // How many arguments ?
             switch (c) {
-                case 'z': case 'Z':
-                        // do nothing
-                        continue;
-                case 'h': case 'H': case 'v': case 'V':
-                        argc = 1; break;
-                case 'm': case 'M': case 'l': case 'L': case 't': case 'T':
-                        argc = 2; break;
-                case 's': case 'S':	case 'q': case 'Q':
-                        argc = 4; break;
-                case 'c': case 'C':
-                        argc = 6; break;
-                case 'a': case 'A':
-                        argc = 7; break;
+                case 'z':
+                case 'Z':
+                    // do nothing
+                    continue;
+                case 'h':
+                case 'H':
+                case 'v':
+                case 'V':
+                    argc = 1;
+                    break;
+                case 'm':
+                case 'M':
+                case 'l':
+                case 'L':
+                case 't':
+                case 'T':
+                    argc = 2;
+                    break;
+                case 's':
+                case 'S':
+                case 'q':
+                case 'Q':
+                    argc = 4;
+                    break;
+                case 'c':
+                case 'C':
+                    argc = 6;
+                    break;
+                case 'a':
+                case 'A':
+                    argc = 7;
+                    break;
                 default:
-                        return prim;
+                    return prim;
             }
 
             // Get arguments
-            for (int j=0; j<argc; j++) {
+            for (int j = 0; j < argc; j++) {
                 num = "";
                 // Skip whitespaces
                 ++i;
                 while (chars[i] == ' ' || chars[i] == '\t' || chars[i] == '\n') {
-                        if (chars[++i] == 0)
-                            return prim;
+                    if (chars[++i] == 0)
+                        return prim;
                 }
                 // Get numbers
 
                 n = chars[i];
-                while(n >= '0' && n <= '9' || n == '.') {
-                        num+=n;
-                        n = chars[++i];
-                        if (n==0)
-                            return prim;
+                while (n >= '0' && n <= '9' || n == '.') {
+                    num += n;
+                    n = chars[++i];
+                    if (n == 0)
+                        return prim;
                 }
                 x = y;
                 // no round() in c++ ??!?
@@ -704,39 +752,47 @@ public class DrawingFactory {
             // Adjust coords
             switch (c) {
                 case 'h':
-                        x = prevx+y; y = prevy; break;
+                    x = prevx + y;
+                    y = prevy;
+                    break;
                 case 'H':
-                        x = y; y = prevy; break;
+                    x = y;
+                    y = prevy;
+                    break;
                 case 'v':
-                        x = prevx; y = prevy+y; break;
+                    x = prevx;
+                    y = prevy + y;
+                    break;
                 case 'V':
-                        x = prevx; break;
+                    x = prevx;
+                    break;
                 default:
-                        if (c >= 'a' && c <= 'z') {
-                                x += prevx;
-                                y += prevy;
-                        }
+                    if (c >= 'a' && c <= 'z') {
+                        x += prevx;
+                        y += prevy;
+                    }
             }
 
             if ((c == 'z') || (c == 'Z')) {
-                if (prim.getNumPoints()>0){
+                if (prim.getNumPoints() > 0) {
                     prim.addPoint(prim.getPoint(0).getX(), prim.getPoint(0).getY());
                 }
             } else {
                 // add point
-                prim.addPoint(x,y);
+                prim.addPoint(x, y);
                 // save values
                 prevx = x;
                 prevy = y;
             }
             prevc = c;
-            c = (i == chars.length-1 ? 0 : chars[++i]);
-	}
-	return prim;
+            c = (i == chars.length - 1 ? 0 : chars[++i]);
+        }
+        return prim;
     }
 
     /**
      * Returns the id of a SVG object.
+     *
      * @param str the string containing the object.
      * @return the id.
      */
@@ -748,20 +804,21 @@ public class DrawingFactory {
         m = findAlphaNum.matcher(m.group());
         m.find();
         id = m.group().replaceAll("\"", "");
-        
+
         return id;
     }
 
     /**
      * Converts a rectangle from a SVG file to a primitive.
+     *
      * @param rect rectangle to be converted.
      * @return the new primitive.
      * @throws ParseException
      */
-    private Primitive primitiveFromRect(String rect){
+    private Primitive primitiveFromRect(String rect) {
         final Primitive primitive = new Primitive();
-        double x,y,width,height;
-        
+        double x, y, width, height;
+
         Matcher m = findX.matcher(rect);
         m.find();
         m = findNum.matcher(m.group());
@@ -787,9 +844,9 @@ public class DrawingFactory {
         height = Math.round(Double.parseDouble(m.group()));
 
         primitive.addPoint(x, y);
-        primitive.addPoint(x+width, y);
-        primitive.addPoint(x+width, y+height);
-        primitive.addPoint(x, y+height);
+        primitive.addPoint(x + width, y);
+        primitive.addPoint(x + width, y + height);
+        primitive.addPoint(x, y + height);
         primitive.addPoint(x, y);
 
         return primitive;
@@ -797,6 +854,7 @@ public class DrawingFactory {
 
     /**
      * Converts a dpath from a SVG file to a primitive. This version uses Batik.
+     *
      * @param dpath dpath from the SVG file.
      * @return the new primitive.
      */
@@ -810,12 +868,14 @@ public class DrawingFactory {
             public void startPath() throws ParseException {
 
             }
+
             public void movetoRel(float x, float y) throws ParseException { // m
-                lastPoint.setX(lastPoint.getX()+x);
-                lastPoint.setY(lastPoint.getY()+y);
+                lastPoint.setX(lastPoint.getX() + x);
+                lastPoint.setY(lastPoint.getY() + y);
                 primitive.addPoint(lastPoint.getX(), lastPoint.getY());
                 // primitive.addPoint(lastPoint.getX(), lastPoint.getY());
             }
+
             public void movetoAbs(float x, float y) throws ParseException { // M
                 lastPoint.setX(x);
                 lastPoint.setY(y);
@@ -872,7 +932,7 @@ public class DrawingFactory {
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
-                for(Point p : points) {
+                for (Point p : points) {
                     primitive.addPoint(p.getX(), p.getY());
                 }
 
@@ -897,7 +957,7 @@ public class DrawingFactory {
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
-                for(Point p : points) {
+                for (Point p : points) {
                     primitive.addPoint(p.getX(), p.getY());
                 }
 
@@ -921,7 +981,7 @@ public class DrawingFactory {
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
-                for(Point p : points) {
+                for (Point p : points) {
                     primitive.addPoint(p.getX(), p.getY());
                 }
 
@@ -945,7 +1005,7 @@ public class DrawingFactory {
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
-                for(Point p : points) {
+                for (Point p : points) {
                     primitive.addPoint(p.getX(), p.getY());
                 }
 
@@ -968,7 +1028,7 @@ public class DrawingFactory {
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
-                for(Point p : points) {
+                for (Point p : points) {
                     primitive.addPoint(p.getX(), p.getY());
                 }
 
@@ -993,7 +1053,7 @@ public class DrawingFactory {
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
-                for(Point p : points) {
+                for (Point p : points) {
                     primitive.addPoint(p.getX(), p.getY());
                 }
 
@@ -1006,7 +1066,7 @@ public class DrawingFactory {
             }
 
             public void curvetoQuadraticSmoothRel(float x, float y)
-                throws ParseException { // t
+                    throws ParseException { // t
                 Point P0 = lastPoint;
                 Point P1 = Functions.reflectControlPoint(lastControlPoint, lastPoint);
                 Point P2 = new Point(lastPoint.getX() + x, lastPoint.getY() + y);
@@ -1016,7 +1076,7 @@ public class DrawingFactory {
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
-                for(Point p : points) {
+                for (Point p : points) {
                     primitive.addPoint(p.getX(), p.getY());
                 }
 
@@ -1029,7 +1089,7 @@ public class DrawingFactory {
             }
 
             public void curvetoQuadraticSmoothAbs(float x, float y)
-                throws ParseException { // T
+                    throws ParseException { // T
                 Point P0 = lastPoint;
                 Point P1 = Functions.reflectControlPoint(lastControlPoint, lastPoint);
                 Point P2 = new Point(x, y);
@@ -1039,7 +1099,7 @@ public class DrawingFactory {
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
-                for(Point p : points) {
+                for (Point p : points) {
                     primitive.addPoint(p.getX(), p.getY());
                 }
 
@@ -1063,7 +1123,7 @@ public class DrawingFactory {
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
-                for(Point p : points) {
+                for (Point p : points) {
                     primitive.addPoint(p.getX(), p.getY());
                 }
 
@@ -1084,7 +1144,7 @@ public class DrawingFactory {
                 if (points.size() > 1)
                     points.remove(0);
                 // insert all representative points
-                for(Point p : points) {
+                for (Point p : points) {
                     primitive.addPoint(p.getX(), p.getY());
                 }
 
