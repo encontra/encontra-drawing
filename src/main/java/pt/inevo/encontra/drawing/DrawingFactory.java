@@ -517,7 +517,7 @@ public class DrawingFactory {
      * @return the drawing.
      */
     @Deprecated
-    private Drawing drawingFromSVGContent(String fileContent) {
+    public Drawing drawingFromSVGContent(String fileContent) {
         // TODO Sandy: (1) SVG to Drawing. Ver: dejasvg.cpp::svg2drawing
         // É preciso melhorar isto, talvez inserir a z order em cada primitiva?
         // Esta é a versão do Dejavista. Dá para o gasto mas penso que poderia
@@ -797,13 +797,17 @@ public class DrawingFactory {
      * @return the id.
      */
     private String extractId(String str) {
-        String id;
+        String id = "";
 
-        Matcher m = findId.matcher(str);
-        m.find();
-        m = findAlphaNum.matcher(m.group());
-        m.find();
-        id = m.group().replaceAll("\"", "");
+        try {
+            Matcher m = findId.matcher(str);
+            m.find();
+            m = findAlphaNum.matcher(m.group());
+            m.find();
+            id = m.group().replaceAll("\"", "");
+        } catch (Exception e) {
+//            e.printStackTrace();
+        }
 
         return id;
     }

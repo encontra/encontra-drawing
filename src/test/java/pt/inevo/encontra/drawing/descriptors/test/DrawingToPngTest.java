@@ -14,8 +14,8 @@ public class DrawingToPngTest extends TestCase {
 
     Drawing drawing;
     String testFilePath;
-    String inputFilename = "/rgesthuizen_Incandescent_light_bulb_1.svg";
-    String outputFilename = "rgesthuizen_Incandescent_light_bulb_1";
+    String inputFilename = "/dandelionmood_Light_Bulb_1.svg";
+    String outputFilename = "dandelionmood_Light_Bulb_1";
 
     @Override
     protected void setUp() throws Exception {
