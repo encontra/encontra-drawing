@@ -7,6 +7,7 @@ import pt.inevo.encontra.drawing.DrawingFactory;
 
 import javax.imageio.ImageIO;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 
 
@@ -32,7 +33,7 @@ public class DrawingToPngTest extends TestCase {
     @Test
     public void testTopogeoExtractor() throws IOException {
         //creating the drawing from the svg file
-        drawing = DrawingFactory.getInstance().drawingFromSVG(testFilePath);
+        drawing = DrawingFactory.getInstance().drawingFromSVG(new FileReader(testFilePath));
         ImageIO.write(drawing.getImage(), "PNG", new File(outputFilename + ".png"));
     }
 }

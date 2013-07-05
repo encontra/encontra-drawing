@@ -7,6 +7,7 @@ import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.ImageTranscoder;
 import org.w3c.dom.svg.SVGDocument;
+import pt.inevo.encontra.drawing.swing.SVGViewer;
 import pt.inevo.encontra.drawing.util.Color;
 import pt.inevo.encontra.geometry.Point;
 import pt.inevo.encontra.storage.IEntity;
@@ -1054,6 +1055,11 @@ public class Drawing implements IEntity<Long> {
         ImageIO.write(bi, "PNG", new File(path + ".png"));
     }
 
+    public void show() {
+        SVGViewer viewer = new SVGViewer();
+        viewer.setSVG(document);
+    }
+
     /**
      * An image transcoder that stores the resulting image.
      */
@@ -1190,7 +1196,7 @@ public class Drawing implements IEntity<Long> {
         this.filename = filename;
     }
 
-    protected SVGDocument getDocument() {
+    public SVGDocument getDocument() {
         return document;
     }
 

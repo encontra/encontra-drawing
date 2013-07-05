@@ -88,7 +88,7 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
      * @param drawing the drawing to be represented.
      * @return An collection of nodes ordered by insertion
      */
-    public ArrayList<TopogeoNode> initialize(Drawing drawing) {
+    public Collection<TopogeoNode> initialize(Drawing drawing) {
         TopogeoNode node;
         ArrayList<Primitive> primitives = drawing.getPrimitivesSortedX();
         // Keep an ordered collection of nodes
@@ -130,7 +130,7 @@ public class TopogeoGraph extends Graph<TopogeoNode, TopogeoEdge> {
 
         log.log(Level.INFO, "Topogeo Graph with id " + getId() + " initialized.");
 
-        return nodes;
+        return getVertices();
     }
 
     /**

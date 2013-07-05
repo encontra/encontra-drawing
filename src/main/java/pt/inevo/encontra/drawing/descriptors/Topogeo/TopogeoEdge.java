@@ -4,6 +4,7 @@ import edu.uci.ics.jung.graph.util.EdgeType;
 import pt.inevo.encontra.graph.GraphEdge;
 
 import java.text.DecimalFormat;
+import java.util.Map;
 
 /**
  * This class represents a topology graph edge. Such an edge represents a link
@@ -91,5 +92,19 @@ public class TopogeoEdge extends GraphEdge {
     public String toString() {
          DecimalFormat df = new DecimalFormat("#.##");
         return type.toString() + " " + df.format(value);
+    }
+
+    @Override
+    public TopogeoEdge clone() {
+        TopogeoEdge edge = new TopogeoEdge(value, type);
+        edge.setSource(getSource());
+        edge.setDest(getDest());
+        edge.setId(id);
+
+        for (Map.Entry<String, Object> entry : userDatum.entrySet()) {
+            edge.setUserDatum(entry.getKey(), entry.getValue());
+        }
+
+        return edge;
     }
 }

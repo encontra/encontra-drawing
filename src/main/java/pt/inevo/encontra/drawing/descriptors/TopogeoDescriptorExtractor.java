@@ -11,10 +11,7 @@ import pt.inevo.encontra.drawing.descriptors.Topogeo.TopogeoNode;
 import pt.inevo.encontra.index.IndexedObject;
 import pt.inevo.encontra.index.Vector;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 /**
  * Extractor for the TopogeoDescriptor.
@@ -35,7 +32,7 @@ public class TopogeoDescriptorExtractor extends DescriptorExtractor<IndexedObjec
 
         //generate the graph and calculate the descriptor
         TopogeoGraph graph = generateTopogeoGraph(drawing);
-
+        graph.show();
         DoubleMatrix2D matrix = generateMatrix(graph);
         double[] descriptorD = generateDescriptor(matrix);
 
@@ -57,21 +54,23 @@ public class TopogeoDescriptorExtractor extends DescriptorExtractor<IndexedObjec
      * @return a Topogeo Graph
      */
     private TopogeoGraph generateTopogeoGraph(Drawing drawing) {
+        //drawing.show();
+
         // SVG -> Topogeo Graph.
         TopogeoGraph graph = new TopogeoGraph(drawing.getId());
 
         // We get an ordered collection of primitive nodes!
-        ArrayList<TopogeoNode> nodes = graph.initialize(drawing);
+        Object[] nodes = graph.initialize(drawing).toArray();
 
         TopogeoNode a, b;
 
-        for (int i = 0; i < nodes.size() - 1; i++) {
-            a = nodes.get(i);
-            if (a.getPrimitive().getId() == TopogeoNode.FEATURE_NODE)
+        for (int i = 0; i < nodes.length - 1; i++) {
+            a = (TopogeoNode) nodes[i];
+            if (a.getPrimitive().getId().equals(TopogeoNode.FEATURE_NODE))
                 continue;
-            for (int j = i + 1; j < nodes.size(); j++) {
-                b = nodes.get(j);
-                if (b.getPrimitive().getId() == TopogeoNode.FEATURE_NODE)
+            for (int j = i + 1; j < nodes.length; j++) {
+                b = (TopogeoNode) nodes[j];
+                if (b.getPrimitive().getId().equals(TopogeoNode.FEATURE_NODE))
                     continue;
                 if (a.getPrimitive().isInPrimitive(b.getPrimitive()))
                     graph.setParent(a, b);

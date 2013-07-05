@@ -8,7 +8,6 @@ import pt.inevo.encontra.drawing.Primitive;
 import pt.inevo.encontra.graph.Graph;
 import pt.inevo.encontra.graph.GraphEdge;
 import pt.inevo.encontra.graph.GraphNode;
-import pt.inevo.encontra.graph.swing.GraphViewer;
 import pt.inevo.encontra.index.Vector;
 import pt.inevo.encontra.storage.IEntry;
 
@@ -59,10 +58,10 @@ public class DrawingTopology implements IEntry<Long,List<Vector>> {
         rootPrimitive.addPoint(0, drawing.getHeight());
         rootPrimitive.addPoint(0, 0);
 
-        GraphNode rootNode = new GraphNode();
+        GraphNode rootNode = new GraphNode(0l);
         rootNode.setData(rootPrimitive);
 
-        graph.createNode(0l, rootNode); // Root node
+        graph.addVertex(rootNode); // Root node
 
         // Add all Primitives in the list to the rootNode.
         for(i = 0; i < lst_primitives.size(); i++) {
@@ -291,7 +290,8 @@ public class DrawingTopology implements IEntry<Long,List<Vector>> {
 
         Graph graph = buildTopologyGraph(drawing);
 
-        GraphViewer viewer=new GraphViewer(graph);
+
+        //GraphViewer viewer=new GraphViewer(graph);
         //viewer.writeJPEGImage("graph_"+graph.getId()+".jpg");
 
         // Compute and return the topology descriptors

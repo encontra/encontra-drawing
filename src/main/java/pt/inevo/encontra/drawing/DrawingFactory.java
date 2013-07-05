@@ -24,9 +24,8 @@ import pt.inevo.encontra.drawing.util.Color;
 import pt.inevo.encontra.drawing.util.Functions;
 import pt.inevo.encontra.geometry.Point;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -132,42 +131,15 @@ public class DrawingFactory {
     }
 
     /**
-     * Returns a new Drawing object from the supplied SVG file.
-     *
-     * @param filePath the path to the SVG source file.
-     * @return the drawing.
-     */
-    public Drawing drawingFromSVG(String filePath) throws FileNotFoundException, IOException {
-//        StringBuilder contents = new StringBuilder();
-//        String line;
-//        FileReader fr = new FileReader(filePath);
-//        BufferedReader br = new BufferedReader(fr);
-//        while((line = br.readLine()) != null) {
-//            contents.append(line).append(System.getProperty("line.separator"));
-//        }
-////        Drawing drawing = drawingFromSVGContent(contents.toString());
-////        return drawing;
-//        StringReader reader = new StringReader(contents.toString());
-//        URI uri = null;
-//        try {
-//            uri = new URI("file:///" + filePath.replace("\\", "/"));
-//        } catch (Exception e) { }
-        Drawing drawing = drawingFromBatik(filePath);
-        drawing.setFilename(filePath);
-        return drawing;
-    }
-
-    /**
      * Generates a drawing from the supplied svg path, using batik.
      *
-     * @param filePath the path to the SVG source file.
+     * @param reader a Reader for the SVG source.
      * @return the generated drawing.
      * @throws IOException
      */
-    private Drawing drawingFromBatik(String filePath) throws IOException {
+    public Drawing drawingFromSVG(Reader reader) throws IOException {
         Drawing drawing = new Drawing(count++);
 
-        FileReader reader = new FileReader(filePath);
         String ns = SVGDOMImplementation.SVG_NAMESPACE_URI;
         String parser = SAXParser.class.getCanonicalName();//XMLResourceDescriptor.getXMLParserClassName(); //devolve null
 //        String parser = XMLResourceDescriptor.getXMLParserClassName();

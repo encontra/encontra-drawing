@@ -9,6 +9,7 @@ import pt.inevo.encontra.drawing.descriptors.TopogeoDescriptor;
 import pt.inevo.encontra.drawing.descriptors.TopogeoDescriptorExtractor;
 import pt.inevo.encontra.index.IndexedObject;
 
+import java.io.FileReader;
 import java.io.IOException;
 
 
@@ -41,7 +42,8 @@ public class DescriptorExtractorsTest extends TestCase {
         idx.setId(new Long(1));
 
         //creating the drawing from the svg file
-        drawing = DrawingFactory.getInstance().drawingFromSVG(testFilePath);
+        drawing = DrawingFactory.getInstance().drawingFromSVG(new FileReader(testFilePath));
+        drawing.show();
         drawing.setId(idx.getId());
         idx.setValue(drawing);
 

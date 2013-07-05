@@ -134,4 +134,14 @@ public class TopogeoNode extends GraphNode {
     public String toString() {
         return "node " + primitive.getId();
     }
+
+    /**
+     * Must override equals to not rely on ID since it just defined the node type
+     * @param o
+     * @return
+     */
+    public boolean equals(Object o) {
+        return o == this;
+    }
+
 }
